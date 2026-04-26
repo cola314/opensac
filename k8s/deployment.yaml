@@ -25,6 +25,16 @@ spec:
           env:
             - name: DATABASE_URL
               value: "/app/data/opensac.db"
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opensac-secrets
+                  key: admin-password
+            - name: OPENROUTER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: opensac-secrets
+                  key: openrouter-api-key
           volumeMounts:
             - name: data
               mountPath: /app/data
@@ -33,7 +43,7 @@ spec:
               memory: "128Mi"
               cpu: "100m"
             limits:
-              memory: "256Mi"
+              memory: "512Mi"
               cpu: "500m"
       volumes:
         - name: data

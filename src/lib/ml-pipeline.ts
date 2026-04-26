@@ -28,7 +28,6 @@ function getCompiledProgram(): string {
 export async function runPipeline(items: PipelineInput[]): Promise<PipelineResult[]> {
   const mlDir = getMlDir();
   const compiledProgram = getCompiledProgram();
-
   const tmpId = randomUUID().slice(0, 8);
   const tmpDir = join(tmpdir(), 'opensac-ml');
   await mkdir(tmpDir, { recursive: true });
