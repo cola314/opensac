@@ -17,3 +17,11 @@ export const concerts = sqliteTable('concerts', {
   sacUrl: text('sac_url'),
   crawledAt: text('crawled_at').notNull(),
 });
+
+export const programs = sqliteTable('programs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  concertSn: text('concert_sn').notNull(),
+  composer: text('composer').notNull(),
+  piece: text('piece').notNull(),
+  createdAt: text('created_at').notNull(),
+});

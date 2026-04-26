@@ -54,5 +54,17 @@ sqlite.exec(`
   END;
 `);
 
+// Create programs table if not exists
+sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS programs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    concert_sn TEXT NOT NULL,
+    composer TEXT NOT NULL,
+    piece TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+`);
+sqlite.exec(`CREATE INDEX IF NOT EXISTS idx_programs_sn ON programs(concert_sn);`);
+
 export const db = drizzle(sqlite, { schema });
 export { sqlite };
