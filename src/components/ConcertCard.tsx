@@ -4,6 +4,11 @@ import React from 'react';
 import Link from 'next/link';
 import { truncateText, highlightText, formatDateRange } from '@/lib/utils';
 
+export interface Program {
+  composer: string;
+  piece: string;
+}
+
 export interface Concert {
   id: number;
   sn: string;
@@ -20,6 +25,7 @@ export interface Concert {
   start_week?: string | null;
   sac_url?: string | null;
   crawled_at: string;
+  programs?: Program[];
 }
 
 interface ConcertCardProps {
@@ -179,14 +185,31 @@ export default function ConcertCard({ concert, query, onClick }: ConcertCardProp
         )}
 
         {/* Program preview */}
-        {programPreview && (
+        {concert.programs && concert.programs.length > 0 ? (
+          <div className="flex flex-col gap-0.5">
+            {concert.programs.slice(0, 3).map((p, i) => (
+              <p key={i} className="text-[13px] leading-snug" style={{ color: '#6e6e73' }}>
+                <span style={{ color: '#424245' }}>
+                  {query ? highlightText(p.composer, query) : p.composer}
+                </span>
+                {' — '}
+                {query ? highlightText(p.piece, query) : p.piece}
+              </p>
+            ))}
+            {concert.programs.length > 3 && (
+              <p className="text-[12px]" style={{ color: '#86868b' }}>
+                외 {concert.programs.length - 3}곡
+              </p>
+            )}
+          </div>
+        ) : programPreview ? (
           <p
             className="text-[13px] leading-relaxed"
             style={{ color: '#6e6e73' }}
           >
             {query ? highlightText(programPreview, query) : programPreview}
           </p>
-        )}
+        ) : null}
 
         {/* Price */}
         {concert.price_info && (

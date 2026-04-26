@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getConcerts, getPlaces, hasMonthData } from '@/db/queries';
+import { getConcerts, getPlaces, hasMonthData, getProgramsBySnList } from '@/db/queries';
 import { crawlMonth } from '@/lib/crawler';
 import { importConcerts } from '@/db/import';
 import { getInMemoryLock } from '@/lib/lock';
@@ -35,15 +35,22 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const concerts = getConcerts({ year, month, query, place });
+    const concerts = getConcerts({ year, month, query, place }) as any[];
     const places = getPlaces({ year, month, query });
+
+    // Attach programs to each concert
+    const sns = concerts.map((c: any) => c.sn);
+    const programsMap = getProgramsBySnList(sns);
 
     // Group concerts by date
     const grouped: Record<string, any[]> = {};
-    for (const concert of concerts as any[]) {
+    for (const concert of concerts) {
       const date = concert.begin_date;
       if (!grouped[date]) grouped[date] = [];
-      grouped[date].push(concert);
+      grouped[date].push({
+        ...concert,
+        programs: programsMap[concert.sn] || [],
+      });
     }
 
     return NextResponse.json({

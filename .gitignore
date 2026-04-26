@@ -51,3 +51,4 @@ ml/data/
 ml/__pycache__/
 ml/**/__pycache__/
 ml/.omc/
+.omc/

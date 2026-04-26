@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getConcertBySn } from '@/db/queries';
+import { getConcertBySn, getProgramsBySn } from '@/db/queries';
 
 export async function GET(
   request: NextRequest,
@@ -17,7 +17,8 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(concert);
+    const programs = getProgramsBySn(sn);
+    return NextResponse.json({ ...concert, programs });
   } catch (error) {
     console.error('Concert detail error:', error);
     return NextResponse.json(

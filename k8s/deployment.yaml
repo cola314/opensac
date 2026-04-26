@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: opensac
-  namespace: default
+  namespace: opensac
   annotations:
     deploy/restart-at: "1"
 spec:

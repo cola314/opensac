@@ -40,6 +40,9 @@ export async function POST(request: NextRequest) {
     const insertStmt = sqlite.prepare(
       'INSERT INTO programs (concert_sn, composer, piece, created_at) VALUES (?, ?, ?, ?)'
     );
+    const updateProgramsText = sqlite.prepare(
+      'UPDATE concerts SET programs_text = ? WHERE sn = ?'
+    );
     const now = new Date().toISOString();
 
     const upsertAll = sqlite.transaction(() => {
@@ -48,9 +51,14 @@ export async function POST(request: NextRequest) {
         for (const program of result.programs) {
           insertStmt.run(result.sn, program.composer, program.piece, now);
         }
+        const text = result.programs.map((p) => `${p.composer} ${p.piece}`).join(' | ');
+        updateProgramsText.run(text, result.sn);
       }
     });
     upsertAll();
+
+    // Rebuild FTS index
+    sqlite.exec("INSERT INTO concerts_fts(concerts_fts) VALUES('rebuild')");
 
     const totalPrograms = results.reduce((sum, r) => sum + r.programs.length, 0);
 

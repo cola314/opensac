@@ -71,6 +71,27 @@ export function hasMonthData(year: number, month: number): boolean {
   return (row?.cnt ?? 0) > 0;
 }
 
+export function getProgramsBySn(sn: string) {
+  return sqlite.prepare(
+    'SELECT composer, piece FROM programs WHERE concert_sn = ? ORDER BY id'
+  ).all(sn) as Array<{ composer: string; piece: string }>;
+}
+
+export function getProgramsBySnList(sns: string[]) {
+  if (sns.length === 0) return {};
+  const placeholders = sns.map(() => '?').join(',');
+  const rows = sqlite.prepare(
+    `SELECT concert_sn, composer, piece FROM programs WHERE concert_sn IN (${placeholders}) ORDER BY id`
+  ).all(...sns) as Array<{ concert_sn: string; composer: string; piece: string }>;
+
+  const map: Record<string, Array<{ composer: string; piece: string }>> = {};
+  for (const row of rows) {
+    if (!map[row.concert_sn]) map[row.concert_sn] = [];
+    map[row.concert_sn].push({ composer: row.composer, piece: row.piece });
+  }
+  return map;
+}
+
 const KNOWN_PLACES = ['콘서트홀', '리사이틀홀', 'IBK기업은행챔버홀', '인춘아트홀'];
 
 export function getPlaces(filters?: { year?: number; month?: number; query?: string }) {

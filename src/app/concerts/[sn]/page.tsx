@@ -2,6 +2,11 @@ import { notFound } from 'next/navigation';
 import { BackLink, ExternalLinkButton } from '@/components/InteractiveLink';
 import { cleanDetailText, formatDate, formatDateRange, getWeekdayName } from '@/lib/utils';
 
+interface Program {
+  composer: string;
+  piece: string;
+}
+
 interface Concert {
   id: number;
   sn: string;
@@ -18,6 +23,7 @@ interface Concert {
   start_week?: string | null;
   sac_url?: string | null;
   crawled_at: string;
+  programs?: Program[];
 }
 
 async function getConcert(sn: string): Promise<Concert | null> {
@@ -245,6 +251,50 @@ export default async function ConcertDetailPage({
               >
                 {concert.price_info}
               </p>
+            </div>
+          )}
+
+          {/* Extracted programs */}
+          {concert.programs && concert.programs.length > 0 && (
+            <div
+              className="rounded-2xl p-5"
+              style={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #d2d2d7',
+              }}
+            >
+              <h2
+                className="text-[13px] font-semibold uppercase tracking-wider mb-4"
+                style={{ color: '#86868b' }}
+              >
+                프로그램
+              </h2>
+              <div className="flex flex-col gap-3">
+                {concert.programs.map((p, i) => (
+                  <div key={i} className="flex items-baseline gap-3">
+                    <span
+                      className="text-[12px] font-medium tabular-nums flex-shrink-0"
+                      style={{ color: '#86868b', minWidth: '20px' }}
+                    >
+                      {i + 1}
+                    </span>
+                    <div>
+                      <p
+                        className="text-[15px] font-medium leading-snug"
+                        style={{ color: '#1d1d1f' }}
+                      >
+                        {p.piece}
+                      </p>
+                      <p
+                        className="text-[13px] mt-0.5"
+                        style={{ color: '#6e6e73' }}
+                      >
+                        {p.composer}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
