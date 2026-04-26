@@ -8,6 +8,27 @@ const sqlite = new Database(dbPath);
 // Enable WAL mode for better concurrent read performance
 sqlite.pragma('journal_mode = WAL');
 
+// Create concerts table if not exists
+sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS concerts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sn TEXT UNIQUE NOT NULL,
+    title TEXT NOT NULL,
+    title_eng TEXT,
+    begin_date TEXT NOT NULL,
+    end_date TEXT,
+    playtime TEXT,
+    place_name TEXT,
+    place_code TEXT,
+    price_info TEXT,
+    sale_state TEXT,
+    detail_text TEXT,
+    start_week TEXT,
+    sac_url TEXT,
+    crawled_at TEXT NOT NULL
+  );
+`);
+
 // Create FTS5 virtual table if not exists
 sqlite.exec(`
   CREATE VIRTUAL TABLE IF NOT EXISTS concerts_fts USING fts5(
