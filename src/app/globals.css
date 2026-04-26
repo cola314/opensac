@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-apple-black: #000000;
+  --color-apple-gray-light: #f5f5f7;
+  --color-apple-white: #ffffff;
+  --color-apple-ink: #1d1d1f;
+  --color-apple-secondary: #6e6e73;
+  --color-apple-border-soft: #d2d2d7;
+  --color-apple-border-mid: #86868b;
+  --color-apple-utility-dark: #424245;
+  --color-apple-blue: #0071e3;
+  --color-apple-blue-body: #0066cc;
+  --color-apple-blue-bright: #2997ff;
+  --color-apple-graphite-a: #272729;
+  --color-apple-graphite-b: #262629;
+  --color-apple-graphite-c: #28282b;
+  --color-apple-graphite-d: #2a2a2c;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #1d1d1f;
+
+  /* Apple palette */
+  --apple-black: #000000;
+  --apple-gray-light: #f5f5f7;
+  --apple-white: #ffffff;
+  --apple-ink: #1d1d1f;
+  --apple-secondary: #6e6e73;
+  --apple-border-soft: #d2d2d7;
+  --apple-border-mid: #86868b;
+  --apple-blue: #0071e3;
+  --apple-blue-body: #0066cc;
+  --apple-blue-bright: #2997ff;
+  --apple-graphite-a: #272729;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  line-height: 1.47;
+  letter-spacing: -0.374px;
+}
+
+/* Smooth scroll restoration */
+html:focus-within {
+  scroll-behavior: smooth;
+}
+
+/* Focus visible ring using Apple blue */
+:focus-visible {
+  outline: 2px solid var(--apple-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Remove default focus for mouse interactions */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Highlight mark styling */
+mark {
+  background-color: rgba(0, 113, 227, 0.15);
+  color: #0071e3;
+  border-radius: 2px;
+  padding: 0 1px;
+  font-weight: 600;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--apple-border-soft);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--apple-border-mid);
+}
