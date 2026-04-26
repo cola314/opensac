@@ -43,3 +43,10 @@ next-env.d.ts
 # database
 *.db
 data/
+
+# ML
+ml/.venv/
+ml/.env
+ml/data/
+ml/__pycache__/
+ml/**/__pycache__/
