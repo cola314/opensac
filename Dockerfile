@@ -13,9 +13,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_PRIVATE_WORKER_THREADS=1
-RUN mkdir -p data && touch data/opensac.db
+RUN mkdir -p data
 ENV DATABASE_URL=./data/opensac.db
+RUN node -e "require('better-sqlite3')('./data/opensac.db').close()"
 RUN npm run build
 
 # Production

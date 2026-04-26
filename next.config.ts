@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  serverExternalPackages: ['cheerio'],
+  serverExternalPackages: ['cheerio', 'better-sqlite3'],
 };
 
 export default nextConfig;

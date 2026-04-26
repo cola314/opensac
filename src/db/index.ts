@@ -1,8 +1,14 @@
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import Database from 'better-sqlite3';
+import { mkdirSync } from 'fs';
+import { dirname } from 'path';
 import * as schema from './schema';
 
 const dbPath = process.env.DATABASE_URL || './data/opensac.db';
+
+// Ensure parent directory exists
+mkdirSync(dirname(dbPath), { recursive: true });
+
 const sqlite = new Database(dbPath);
 
 // Enable WAL mode for better concurrent read performance
@@ -30,35 +36,6 @@ sqlite.exec(`
   );
 `);
 
-// FTS5 setup with corruption recovery
-function initFts() {
-  // Recreate if schema changed
-  const ftsInfo = sqlite.prepare("SELECT sql FROM sqlite_master WHERE name = 'concerts_fts'").get() as { sql: string } | undefined;
-  if (ftsInfo && !ftsInfo.sql?.includes('programs_text')) {
-    sqlite.exec(`DROP TABLE IF EXISTS concerts_fts`);
-  }
-
-  sqlite.exec(`
-    CREATE VIRTUAL TABLE IF NOT EXISTS concerts_fts USING fts5(
-      title, detail_text, programs_text, content=concerts, content_rowid=id
-    );
-  `);
-
-  // Test FTS integrity — rebuild if corrupted
-  try {
-    sqlite.prepare("SELECT count(*) FROM concerts_fts").get();
-  } catch {
-    sqlite.exec(`DROP TABLE IF EXISTS concerts_fts`);
-    sqlite.exec(`
-      CREATE VIRTUAL TABLE IF NOT EXISTS concerts_fts USING fts5(
-        title, detail_text, programs_text, content=concerts, content_rowid=id
-      );
-    `);
-    sqlite.exec("INSERT INTO concerts_fts(concerts_fts) VALUES('rebuild')");
-  }
-}
-initFts();
-
 // Add programs_text column if not exists
 try {
   sqlite.exec(`ALTER TABLE concerts ADD COLUMN programs_text TEXT DEFAULT ''`);
@@ -66,7 +43,32 @@ try {
   // Column already exists
 }
 
-// Triggers to keep FTS in sync (drop and recreate to handle schema changes)
+// FTS5 setup with corruption recovery
+const ftsInfo = sqlite.prepare("SELECT sql FROM sqlite_master WHERE name = 'concerts_fts'").get() as { sql: string } | undefined;
+if (ftsInfo && !ftsInfo.sql?.includes('programs_text')) {
+  sqlite.exec(`DROP TABLE IF EXISTS concerts_fts`);
+}
+
+sqlite.exec(`
+  CREATE VIRTUAL TABLE IF NOT EXISTS concerts_fts USING fts5(
+    title, detail_text, programs_text, content=concerts, content_rowid=id
+  );
+`);
+
+// Test FTS integrity — rebuild if corrupted
+try {
+  sqlite.prepare("SELECT count(*) FROM concerts_fts").get();
+} catch {
+  sqlite.exec(`DROP TABLE IF EXISTS concerts_fts`);
+  sqlite.exec(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS concerts_fts USING fts5(
+      title, detail_text, programs_text, content=concerts, content_rowid=id
+    );
+  `);
+  sqlite.exec("INSERT INTO concerts_fts(concerts_fts) VALUES('rebuild')");
+}
+
+// Triggers to keep FTS in sync
 sqlite.exec(`DROP TRIGGER IF EXISTS concerts_ai`);
 sqlite.exec(`DROP TRIGGER IF EXISTS concerts_ad`);
 sqlite.exec(`DROP TRIGGER IF EXISTS concerts_au`);
