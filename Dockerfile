@@ -23,9 +23,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN mkdir -p data
 RUN npm run build
 
-# Production
-FROM python:3.13-alpine AS runner
-RUN apk add --no-cache nodejs
+# Production — node base with python added
+FROM base AS runner
+RUN apk add --no-cache python3
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
