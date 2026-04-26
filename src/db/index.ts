@@ -7,6 +7,7 @@ const sqlite = new Database(dbPath);
 
 // Enable WAL mode for better concurrent read performance
 sqlite.pragma('journal_mode = WAL');
+sqlite.pragma('busy_timeout = 5000');
 
 // Create concerts table if not exists
 sqlite.exec(`
