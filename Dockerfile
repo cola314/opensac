@@ -13,6 +13,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PRIVATE_WORKER_THREADS=1
 RUN mkdir -p data && touch data/opensac.db
 ENV DATABASE_URL=./data/opensac.db
 RUN npm run build
