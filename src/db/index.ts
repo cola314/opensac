@@ -30,17 +30,34 @@ sqlite.exec(`
   );
 `);
 
-// Recreate FTS5 if schema changed (add programs_text column)
-const ftsInfo = sqlite.prepare("SELECT sql FROM sqlite_master WHERE name = 'concerts_fts'").get() as { sql: string } | undefined;
-if (ftsInfo && !ftsInfo.sql?.includes('programs_text')) {
-  sqlite.exec(`DROP TABLE IF EXISTS concerts_fts`);
-}
+// FTS5 setup with corruption recovery
+function initFts() {
+  // Recreate if schema changed
+  const ftsInfo = sqlite.prepare("SELECT sql FROM sqlite_master WHERE name = 'concerts_fts'").get() as { sql: string } | undefined;
+  if (ftsInfo && !ftsInfo.sql?.includes('programs_text')) {
+    sqlite.exec(`DROP TABLE IF EXISTS concerts_fts`);
+  }
 
-sqlite.exec(`
-  CREATE VIRTUAL TABLE IF NOT EXISTS concerts_fts USING fts5(
-    title, detail_text, programs_text, content=concerts, content_rowid=id
-  );
-`);
+  sqlite.exec(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS concerts_fts USING fts5(
+      title, detail_text, programs_text, content=concerts, content_rowid=id
+    );
+  `);
+
+  // Test FTS integrity — rebuild if corrupted
+  try {
+    sqlite.prepare("SELECT count(*) FROM concerts_fts").get();
+  } catch {
+    sqlite.exec(`DROP TABLE IF EXISTS concerts_fts`);
+    sqlite.exec(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS concerts_fts USING fts5(
+        title, detail_text, programs_text, content=concerts, content_rowid=id
+      );
+    `);
+    sqlite.exec("INSERT INTO concerts_fts(concerts_fts) VALUES('rebuild')");
+  }
+}
+initFts();
 
 // Add programs_text column if not exists
 try {
