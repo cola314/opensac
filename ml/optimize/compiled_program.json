@@ -1,0 +1,71 @@
+{
+  "extractor.predict": {
+    "traces": [],
+    "train": [],
+    "demos": [
+      {
+        "augmented": true,
+        "detail_text": "■ 출연진\n지휘 ㅣ정나라\n협연 ㅣ김형주(호른)\n연주 ㅣ공주시충남교향악단\n \n■ 프로그램\n모차르트 l 호른 협주곡 제4번 \n버르토크 l 관현악을 위한 협주곡 \n \n*출연자 및 프로그램은 사정에 따라 변경될 수 있습니다.",
+        "reasoning": "The text contains a \"■ 프로그램\" section. I will extract the composer and piece information from this section.\n1. \"모차르트 l 호른 협주곡 제4번\": Composer is Mozart and the piece is Horn Concerto No. 4.\n2. \"버르토크 l 관현악을 위한 협주곡\": Composer is Bartók and the piece is Concerto for Orchestra.\n\nI will format these as a list of dictionaries with 'composer' and 'piece' keys.[[ ## reasoning ## ]]\nThe text contains a \"■ 프로그램\" section. I will extract the composer and piece information from this section.\n1. \"모차르트 l 호른 협주곡 제4번\": Composer is Mozart and the piece is Horn Concerto No. 4.\n2. \"버르토크 l 관현악을 위한 협주곡\": Composer is Bartók and the piece is Concerto for Orchestra.\n\nI will format these as a list of dictionaries with 'composer' and 'piece' keys.",
+        "programs": [
+          {
+            "composer": "Wolfgang Amadeus Mozart",
+            "piece": "Horn Concerto No. 4"
+          },
+          {
+            "composer": "Béla Bartók",
+            "piece": "Concerto for Orchestra"
+          }
+        ]
+      },
+      {
+        "detail_text": "[출연]지휘 서진협연 피아노 조지현, 바이올린 강보라, 전재성연주 KT심포니오케스트라콘서트 가이드 김용배 [프로그램]스메타나  교향시 '나의 조국' 중 비셰흐라드               모차르트 피아노 협주곡 제23번 A장조 K.488                   바흐 두 대의 바이올린을 위한 협주곡 d단조 BWV 1043        하차투리안  스파르타쿠스 모음곡 제2번",
+        "programs": [
+          {
+            "composer": "Bedrich Smetana",
+            "piece": "Má vlast, Vyšehrad"
+          },
+          {
+            "composer": "Wolfgang Amadeus Mozart",
+            "piece": "Piano Concerto No. 23 in A major, K. 488"
+          },
+          {
+            "composer": "Johann Sebastian Bach",
+            "piece": "Concerto for Two Violins in D minor, BWV 1043"
+          },
+          {
+            "composer": "Aram Khachaturian",
+            "piece": "Spartacus, Suite No. 2"
+          }
+        ],
+        "sn": "74050.0",
+        "title": "KT와 함께하는 예술의전당 마음을 담은 클래식(5월)"
+      }
+    ],
+    "signature": {
+      "instructions": "You are a highly skilled musicologist specializing in classical concert programs. Your task is to meticulously extract and standardize classical music program information from Korean `detail_text` fields.\n\nFrom the provided `detail_text`, identify and extract each musical piece, along with its composer and the full title of the piece (including any opus or catalog numbers). When a piece is presented in both Korean and English, prioritize and extract only the English version. If a piece appears multiple times in both languages, consolidate it into a single entry using the English details. If no program information is present in the text, return an empty list.\n\nThe output should be a list of `Program` objects, where each object has two attributes: `composer` (string, full name preferred if available, or common abbreviation) and `piece` (string, the full title of the work).\n\nFor example:\nInput: \"스메타나 교향시 '나의 조국' 중 비셰흐라드\" should map to `Program(composer='Bedřich Smetana', piece='Má Vlast (My Homeland), Vyšehrad')`\nInput: \"모차르트 피아노 협주곡 제23번 A장조 K.488\" should map to `Program(composer='Wolfgang Amadeus Mozart', piece='Piano Concerto No. 23 in A major, K. 488')`\nInput: \"S. Rachmaninoff︱Piano Concerto No.2 in c minor, Op.18\" should map to `Program(composer='S. Rachmaninoff', piece='Piano Concerto No.2 in C minor, Op.18')`\n\nPay close attention to detail, ensuring accuracy in composer names and piece titles, and maintain consistency in the output format.",
+      "fields": [
+        {
+          "prefix": "Detail Text:",
+          "description": "공연 작품소개 텍스트 (한글/영문 혼용)"
+        },
+        {
+          "prefix": "Reasoning:",
+          "description": "${reasoning}"
+        },
+        {
+          "prefix": "Programs:",
+          "description": "추출된 프로그램 목록. 한글/영문 병기 시 원어(영문) 기준 하나만 추출."
+        }
+      ]
+    },
+    "lm": null
+  },
+  "metadata": {
+    "dependency_versions": {
+      "python": "3.14",
+      "dspy": "3.2.0",
+      "cloudpickle": "3.1"
+    }
+  }
+}
