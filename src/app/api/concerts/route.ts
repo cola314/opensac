@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConcerts, getPlaces, hasMonthData } from '@/db/queries';
 import { crawlMonth } from '@/lib/crawler';
 import { importConcerts } from '@/db/import';
+import { getInMemoryLock } from '@/lib/lock';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,13 +17,21 @@ export async function GET(request: NextRequest) {
   try {
     // Lazy crawl: if year/month specified but no data exists, crawl on-demand
     if (year && month && !hasMonthData(year, month)) {
+      const lock = getInMemoryLock();
+      const key = `${year}-${month}`;
+      const { acquired } = await lock.acquire(key);
       try {
-        const crawled = await crawlMonth(year, month);
-        if (crawled.length > 0) {
-          importConcerts(crawled);
+        if (acquired) {
+          const crawled = await crawlMonth(year, month);
+          if (crawled.length > 0) {
+            importConcerts(crawled);
+          }
         }
+        // acquired=false면 이미 다른 요청이 크롤링 완료한 상태
       } catch (e) {
         console.error(`Lazy crawl failed for ${year}-${month}:`, e);
+      } finally {
+        if (acquired) lock.release(key);
       }
     }
 
