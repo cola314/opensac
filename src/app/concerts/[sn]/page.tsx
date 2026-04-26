@@ -1,7 +1,5 @@
-'use client';
-
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { BackLink, ExternalLinkButton } from '@/components/InteractiveLink';
 import { cleanDetailText, formatDate, formatDateRange, getWeekdayName } from '@/lib/utils';
 
 interface Concert {
@@ -66,17 +64,7 @@ export default async function ConcertDetailPage({
           style={{ maxWidth: '760px', padding: '24px 20px 0' }}
         >
           {/* Back nav */}
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 mb-6 text-[14px] font-medium transition-colors"
-            style={{ color: '#6e6e73', textDecoration: 'none' }}
-            onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLElement).style.color = '#ffffff')
-            }
-            onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLElement).style.color = '#6e6e73')
-            }
-          >
+          <BackLink href="/">
             <svg width="7" height="12" viewBox="0 0 7 12" fill="none">
               <path
                 d="M6 1L1 6L6 11"
@@ -87,7 +75,7 @@ export default async function ConcertDetailPage({
               />
             </svg>
             공연 목록
-          </Link>
+          </BackLink>
 
           {/* Concert header content */}
           <div style={{ paddingBottom: '40px' }}>
@@ -291,23 +279,7 @@ export default async function ConcertDetailPage({
 
           {/* SAC link */}
           {concert.sac_url && (
-            <a
-              href={concert.sac_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-full text-[15px] font-semibold transition-colors"
-              style={{
-                backgroundColor: '#0071e3',
-                color: '#ffffff',
-                textDecoration: 'none',
-              }}
-              onMouseEnter={(e) =>
-                ((e.currentTarget as HTMLElement).style.backgroundColor = '#0066cc')
-              }
-              onMouseLeave={(e) =>
-                ((e.currentTarget as HTMLElement).style.backgroundColor = '#0071e3')
-              }
-            >
+            <ExternalLinkButton href={concert.sac_url}>
               예술의전당 공식 페이지에서 보기
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path
@@ -318,7 +290,7 @@ export default async function ConcertDetailPage({
                   strokeLinejoin="round"
                 />
               </svg>
-            </a>
+            </ExternalLinkButton>
           )}
 
           {/* Crawled at */}
