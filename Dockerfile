@@ -14,6 +14,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL=./data/opensac.db
+RUN mkdir -p data
 RUN node -e "\
 const Database = require('better-sqlite3');\
 const db = new Database('./data/opensac.db');\
