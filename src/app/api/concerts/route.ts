@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getConcerts, getPlaces } from '@/db/queries';
+import { getConcerts, getPlaces, hasMonthData } from '@/db/queries';
+import { crawlMonth } from '@/lib/crawler';
+import { importConcerts } from '@/db/import';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -10,6 +14,18 @@ export async function GET(request: NextRequest) {
   const place = searchParams.get('place') || undefined;
 
   try {
+    // Lazy crawl: if year/month specified but no data exists, crawl on-demand
+    if (year && month && !hasMonthData(year, month)) {
+      try {
+        const crawled = await crawlMonth(year, month);
+        if (crawled.length > 0) {
+          importConcerts(crawled);
+        }
+      } catch (e) {
+        console.error(`Lazy crawl failed for ${year}-${month}:`, e);
+      }
+    }
+
     const concerts = getConcerts({ year, month, query, place });
     const places = getPlaces({ year, month, query });
 

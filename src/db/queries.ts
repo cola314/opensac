@@ -63,6 +63,14 @@ export function getConcertBySn(sn: string) {
   return sqlite.prepare('SELECT * FROM concerts WHERE sn = ?').get(sn);
 }
 
+export function hasMonthData(year: number, month: number): boolean {
+  const monthStr = String(month).padStart(2, '0');
+  const row = sqlite.prepare(
+    'SELECT COUNT(*) as cnt FROM concerts WHERE begin_date LIKE ?'
+  ).get(`${year}.${monthStr}%`) as { cnt: number } | undefined;
+  return (row?.cnt ?? 0) > 0;
+}
+
 const KNOWN_PLACES = ['콘서트홀', '리사이틀홀', 'IBK기업은행챔버홀', '인춘아트홀'];
 
 export function getPlaces(filters?: { year?: number; month?: number; query?: string }) {
