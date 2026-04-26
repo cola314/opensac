@@ -13,9 +13,16 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN mkdir -p data
 ENV DATABASE_URL=./data/opensac.db
-RUN node -e "require('better-sqlite3')('./data/opensac.db').close()"
+RUN node -e "\
+const Database = require('better-sqlite3');\
+const db = new Database('./data/opensac.db');\
+db.pragma('journal_mode = WAL');\
+db.exec('CREATE TABLE IF NOT EXISTS concerts (id INTEGER PRIMARY KEY AUTOINCREMENT, sn TEXT UNIQUE NOT NULL, title TEXT NOT NULL, title_eng TEXT, begin_date TEXT NOT NULL, end_date TEXT, playtime TEXT, place_name TEXT, place_code TEXT, price_info TEXT, sale_state TEXT, detail_text TEXT, start_week TEXT, sac_url TEXT, crawled_at TEXT NOT NULL, programs_text TEXT DEFAULT \"\")');\
+db.exec('CREATE VIRTUAL TABLE IF NOT EXISTS concerts_fts USING fts5(title, detail_text, programs_text, content=concerts, content_rowid=id)');\
+db.exec('CREATE TABLE IF NOT EXISTS programs (id INTEGER PRIMARY KEY AUTOINCREMENT, concert_sn TEXT NOT NULL, composer TEXT NOT NULL, piece TEXT NOT NULL, created_at TEXT NOT NULL)');\
+db.close();\
+console.log('DB initialized');"
 RUN npm run build
 
 # Production

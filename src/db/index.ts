@@ -1,33 +1,24 @@
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import Database from 'better-sqlite3';
-import { mkdirSync, existsSync, writeFileSync } from 'fs';
-import { dirname, join } from 'path';
+import { mkdirSync } from 'fs';
+import { dirname } from 'path';
 import * as schema from './schema';
 
 const dbPath = process.env.DATABASE_URL || './data/opensac.db';
 
-// Ensure parent directory exists
 mkdirSync(dirname(dbPath), { recursive: true });
 
 const sqlite = new Database(dbPath);
-
 sqlite.pragma('journal_mode = WAL');
 sqlite.pragma('busy_timeout = 10000');
 
-// Use a lock file to ensure only one process initializes the schema
-const lockPath = dbPath + '.init-lock';
-const needsInit = !existsSync(lockPath);
+// Check if schema already initialized (skip heavy DDL if tables exist)
+const tableCheck = sqlite.prepare("SELECT count(*) as cnt FROM sqlite_master WHERE type='table' AND name='concerts'").get() as { cnt: number };
 
-if (needsInit) {
-  try {
-    writeFileSync(lockPath, new Date().toISOString());
-  } catch {
-    // Another process may have created it
-  }
-
-  // Create concerts table
+if (tableCheck.cnt === 0) {
+  // Fresh DB — initialize schema
   sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS concerts (
+    CREATE TABLE concerts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       sn TEXT UNIQUE NOT NULL,
       title TEXT NOT NULL,
@@ -42,46 +33,17 @@ if (needsInit) {
       detail_text TEXT,
       start_week TEXT,
       sac_url TEXT,
-      crawled_at TEXT NOT NULL
+      crawled_at TEXT NOT NULL,
+      programs_text TEXT DEFAULT ''
     );
   `);
 
-  // Add programs_text column if not exists
-  try {
-    sqlite.exec(`ALTER TABLE concerts ADD COLUMN programs_text TEXT DEFAULT ''`);
-  } catch {
-    // Column already exists
-  }
-
-  // FTS5 setup
-  const ftsInfo = sqlite.prepare("SELECT sql FROM sqlite_master WHERE name = 'concerts_fts'").get() as { sql: string } | undefined;
-  if (ftsInfo && !ftsInfo.sql?.includes('programs_text')) {
-    sqlite.exec(`DROP TABLE IF EXISTS concerts_fts`);
-  }
-
   sqlite.exec(`
-    CREATE VIRTUAL TABLE IF NOT EXISTS concerts_fts USING fts5(
+    CREATE VIRTUAL TABLE concerts_fts USING fts5(
       title, detail_text, programs_text, content=concerts, content_rowid=id
     );
   `);
 
-  // Test FTS integrity
-  try {
-    sqlite.prepare("SELECT count(*) FROM concerts_fts").get();
-  } catch {
-    sqlite.exec(`DROP TABLE IF EXISTS concerts_fts`);
-    sqlite.exec(`
-      CREATE VIRTUAL TABLE IF NOT EXISTS concerts_fts USING fts5(
-        title, detail_text, programs_text, content=concerts, content_rowid=id
-      );
-    `);
-    sqlite.exec("INSERT INTO concerts_fts(concerts_fts) VALUES('rebuild')");
-  }
-
-  // Triggers
-  sqlite.exec(`DROP TRIGGER IF EXISTS concerts_ai`);
-  sqlite.exec(`DROP TRIGGER IF EXISTS concerts_ad`);
-  sqlite.exec(`DROP TRIGGER IF EXISTS concerts_au`);
   sqlite.exec(`
     CREATE TRIGGER concerts_ai AFTER INSERT ON concerts BEGIN
       INSERT INTO concerts_fts(rowid, title, detail_text, programs_text) VALUES (new.id, new.title, new.detail_text, new.programs_text);
@@ -99,7 +61,25 @@ if (needsInit) {
     END;
   `);
 
-  // Programs table
+  sqlite.exec(`
+    CREATE TABLE programs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      concert_sn TEXT NOT NULL,
+      composer TEXT NOT NULL,
+      piece TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+  `);
+  sqlite.exec(`CREATE INDEX idx_programs_sn ON programs(concert_sn);`);
+} else {
+  // Existing DB — apply migrations only
+  try {
+    sqlite.exec(`ALTER TABLE concerts ADD COLUMN programs_text TEXT DEFAULT ''`);
+  } catch {
+    // Already exists
+  }
+
+  // Ensure programs table exists
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS programs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,6 +90,51 @@ if (needsInit) {
     );
   `);
   sqlite.exec(`CREATE INDEX IF NOT EXISTS idx_programs_sn ON programs(concert_sn);`);
+
+  // FTS migration: check if programs_text column exists in FTS
+  const ftsInfo = sqlite.prepare("SELECT sql FROM sqlite_master WHERE name = 'concerts_fts'").get() as { sql: string } | undefined;
+  if (!ftsInfo || !ftsInfo.sql?.includes('programs_text')) {
+    sqlite.exec(`DROP TABLE IF EXISTS concerts_fts`);
+    sqlite.exec(`
+      CREATE VIRTUAL TABLE concerts_fts USING fts5(
+        title, detail_text, programs_text, content=concerts, content_rowid=id
+      );
+    `);
+    sqlite.exec("INSERT INTO concerts_fts(concerts_fts) VALUES('rebuild')");
+
+    sqlite.exec(`DROP TRIGGER IF EXISTS concerts_ai`);
+    sqlite.exec(`DROP TRIGGER IF EXISTS concerts_ad`);
+    sqlite.exec(`DROP TRIGGER IF EXISTS concerts_au`);
+    sqlite.exec(`
+      CREATE TRIGGER concerts_ai AFTER INSERT ON concerts BEGIN
+        INSERT INTO concerts_fts(rowid, title, detail_text, programs_text) VALUES (new.id, new.title, new.detail_text, new.programs_text);
+      END;
+    `);
+    sqlite.exec(`
+      CREATE TRIGGER concerts_ad AFTER DELETE ON concerts BEGIN
+        INSERT INTO concerts_fts(concerts_fts, rowid, title, detail_text, programs_text) VALUES('delete', old.id, old.title, old.detail_text, old.programs_text);
+      END;
+    `);
+    sqlite.exec(`
+      CREATE TRIGGER concerts_au AFTER UPDATE ON concerts BEGIN
+        INSERT INTO concerts_fts(concerts_fts, rowid, title, detail_text, programs_text) VALUES('delete', old.id, old.title, old.detail_text, old.programs_text);
+        INSERT INTO concerts_fts(rowid, title, detail_text, programs_text) VALUES (new.id, new.title, new.detail_text, new.programs_text);
+      END;
+    `);
+  }
+
+  // Test FTS integrity
+  try {
+    sqlite.prepare("SELECT count(*) FROM concerts_fts").get();
+  } catch {
+    sqlite.exec(`DROP TABLE IF EXISTS concerts_fts`);
+    sqlite.exec(`
+      CREATE VIRTUAL TABLE concerts_fts USING fts5(
+        title, detail_text, programs_text, content=concerts, content_rowid=id
+      );
+    `);
+    sqlite.exec("INSERT INTO concerts_fts(concerts_fts) VALUES('rebuild')");
+  }
 }
 
 export const db = drizzle(sqlite, { schema });
