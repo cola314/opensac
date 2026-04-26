@@ -24,7 +24,7 @@ export default function AdminDashboard() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [data, setData] = useState<CalendarData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
   const [selectedSns, setSelectedSns] = useState<Set<string>>(new Set());
   const [processing, setProcessing] = useState(false);
   const [processResult, setProcessResult] = useState<string | null>(null);
@@ -48,7 +48,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchCalendar();
-    setSelectedDate(null);
+    setSelectedDates(new Set());
     setSelectedSns(new Set());
   }, [fetchCalendar]);
 
@@ -71,18 +71,30 @@ export default function AdminDashboard() {
     });
   }
 
-  function selectAllForDate(date: string) {
+  function toggleDate(dateStr: string) {
+    setSelectedDates(prev => {
+      const next = new Set(prev);
+      if (next.has(dateStr)) next.delete(dateStr);
+      else next.add(dateStr);
+      return next;
+    });
+  }
+
+  function selectAllForDates() {
     if (!data) return;
-    const concerts = data.dates[date] || [];
-    const unprocessed = concerts.filter(c => !c.processed && c.hasDetailText);
-    const allSelected = unprocessed.every(c => selectedSns.has(c.sn));
+    const allUnprocessed: string[] = [];
+    for (const date of selectedDates) {
+      const concerts = data.dates[date] || [];
+      concerts.filter(c => !c.processed && c.hasDetailText).forEach(c => allUnprocessed.push(c.sn));
+    }
+    const allSelected = allUnprocessed.every(sn => selectedSns.has(sn));
 
     setSelectedSns(prev => {
       const next = new Set(prev);
       if (allSelected) {
-        unprocessed.forEach(c => next.delete(c.sn));
+        allUnprocessed.forEach(sn => next.delete(sn));
       } else {
-        unprocessed.forEach(c => next.add(c.sn));
+        allUnprocessed.forEach(sn => next.add(sn));
       }
       return next;
     });
@@ -125,7 +137,13 @@ export default function AdminDashboard() {
     calendarDays.push({ day: d, dateStr: `${year}.${mm}.${dd}` });
   }
 
-  const selectedConcerts = selectedDate && data ? (data.dates[selectedDate] || []) : [];
+  const selectedDateEntries: Array<{ date: string; concerts: ConcertItem[] }> = [];
+  if (data && selectedDates.size > 0) {
+    for (const date of Array.from(selectedDates).sort()) {
+      const concerts = data.dates[date] || [];
+      if (concerts.length > 0) selectedDateEntries.push({ date, concerts });
+    }
+  }
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#f5f5f7' }}>
@@ -206,7 +224,7 @@ export default function AdminDashboard() {
                     const concerts = data?.dates[cell.dateStr] || [];
                     const total = concerts.length;
                     const processedCount = concerts.filter(c => c.processed).length;
-                    const isSelected = selectedDate === cell.dateStr;
+                    const isSelected = selectedDates.has(cell.dateStr);
                     const isToday = cell.dateStr === `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
 
                     let dotColor = 'transparent';
@@ -219,7 +237,7 @@ export default function AdminDashboard() {
                     return (
                       <button
                         key={cell.dateStr}
-                        onClick={() => setSelectedDate(isSelected ? null : cell.dateStr)}
+                        onClick={() => toggleDate(cell.dateStr)}
                         className="flex flex-col items-center gap-1 transition-colors"
                         style={{
                           padding: '8px 4px',
@@ -282,90 +300,89 @@ export default function AdminDashboard() {
 
             {/* Concert list panel */}
             <div style={{ flex: '1 1 360px', minWidth: '280px' }}>
-              {selectedDate ? (
+              {selectedDateEntries.length > 0 ? (
                 <div
                   className="rounded-2xl overflow-hidden"
                   style={{ backgroundColor: '#ffffff', border: '1px solid #d2d2d7' }}
                 >
                   <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid #e8e8ed' }}>
                     <h3 className="text-[15px] font-semibold" style={{ color: '#1d1d1f' }}>
-                      {selectedDate}
+                      {selectedDates.size}일 선택
                     </h3>
-                    {selectedConcerts.some(c => !c.processed && c.hasDetailText) && (
-                      <button
-                        onClick={() => selectAllForDate(selectedDate)}
-                        className="text-[13px] font-medium"
-                        style={{ color: '#0071e3', border: 'none', background: 'none', cursor: 'pointer' }}
-                      >
-                        미처리 전체선택
-                      </button>
-                    )}
+                    <button
+                      onClick={selectAllForDates}
+                      className="text-[13px] font-medium"
+                      style={{ color: '#0071e3', border: 'none', background: 'none', cursor: 'pointer' }}
+                    >
+                      미처리 전체선택
+                    </button>
                   </div>
 
                   <div className="flex flex-col">
-                    {selectedConcerts.length === 0 ? (
-                      <div className="px-4 py-8 text-center text-[14px]" style={{ color: '#6e6e73' }}>
-                        이 날짜에 공연이 없습니다
-                      </div>
-                    ) : (
-                      selectedConcerts.map((concert) => (
-                        <label
-                          key={concert.sn}
-                          className="flex items-start gap-3 px-4 py-3 transition-colors"
-                          style={{
-                            borderBottom: '1px solid #f0f0f0',
-                            cursor: concert.hasDetailText ? 'pointer' : 'default',
-                            backgroundColor: selectedSns.has(concert.sn) ? 'rgba(0,113,227,0.04)' : 'transparent',
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedSns.has(concert.sn)}
-                            onChange={() => toggleSn(concert.sn)}
-                            disabled={!concert.hasDetailText}
-                            className="mt-1"
-                            style={{ accentColor: '#0071e3', width: '16px', height: '16px' }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p
-                              className="text-[14px] font-medium truncate"
-                              style={{ color: '#1d1d1f' }}
-                            >
-                              {concert.title}
-                            </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              {concert.placeName && (
-                                <span className="text-[12px]" style={{ color: '#6e6e73' }}>
-                                  {concert.placeName}
-                                </span>
-                              )}
-                              {concert.processed ? (
-                                <span
-                                  className="text-[11px] font-medium px-1.5 py-0.5 rounded-full"
-                                  style={{ backgroundColor: 'rgba(52,199,89,0.1)', color: '#34c759' }}
-                                >
-                                  {concert.programCount}곡 추출
-                                </span>
-                              ) : concert.hasDetailText ? (
-                                <span
-                                  className="text-[11px] font-medium px-1.5 py-0.5 rounded-full"
-                                  style={{ backgroundColor: 'rgba(0,113,227,0.08)', color: '#0071e3' }}
-                                >
-                                  대기
-                                </span>
-                              ) : (
-                                <span
-                                  className="text-[11px] font-medium px-1.5 py-0.5 rounded-full"
-                                  style={{ backgroundColor: '#f5f5f7', color: '#86868b' }}
-                                >
-                                  텍스트 없음
-                                </span>
-                              )}
+                    {selectedDateEntries.map(({ date, concerts }) => (
+                      <div key={date}>
+                        <div className="px-4 py-2" style={{ backgroundColor: '#f5f5f7', borderBottom: '1px solid #e8e8ed' }}>
+                          <span className="text-[13px] font-semibold" style={{ color: '#6e6e73' }}>{date}</span>
+                        </div>
+                        {concerts.map((concert) => (
+                          <label
+                            key={concert.sn}
+                            className="flex items-start gap-3 px-4 py-3 transition-colors"
+                            style={{
+                              borderBottom: '1px solid #f0f0f0',
+                              cursor: concert.hasDetailText ? 'pointer' : 'default',
+                              backgroundColor: selectedSns.has(concert.sn) ? 'rgba(0,113,227,0.04)' : 'transparent',
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedSns.has(concert.sn)}
+                              onChange={() => toggleSn(concert.sn)}
+                              disabled={!concert.hasDetailText}
+                              className="mt-1"
+                              style={{ accentColor: '#0071e3', width: '16px', height: '16px' }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p
+                                className="text-[14px] font-medium truncate"
+                                style={{ color: '#1d1d1f' }}
+                              >
+                                {concert.title}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                {concert.placeName && (
+                                  <span className="text-[12px]" style={{ color: '#6e6e73' }}>
+                                    {concert.placeName}
+                                  </span>
+                                )}
+                                {concert.processed ? (
+                                  <span
+                                    className="text-[11px] font-medium px-1.5 py-0.5 rounded-full"
+                                    style={{ backgroundColor: 'rgba(52,199,89,0.1)', color: '#34c759' }}
+                                  >
+                                    {concert.programCount}곡 추출
+                                  </span>
+                                ) : concert.hasDetailText ? (
+                                  <span
+                                    className="text-[11px] font-medium px-1.5 py-0.5 rounded-full"
+                                    style={{ backgroundColor: 'rgba(0,113,227,0.08)', color: '#0071e3' }}
+                                  >
+                                    대기
+                                  </span>
+                                ) : (
+                                  <span
+                                    className="text-[11px] font-medium px-1.5 py-0.5 rounded-full"
+                                    style={{ backgroundColor: '#f5f5f7', color: '#86868b' }}
+                                  >
+                                    텍스트 없음
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </label>
-                      ))
-                    )}
+                          </label>
+                        ))}
+                      </div>
+                    ))}
                   </div>
                 </div>
               ) : (
