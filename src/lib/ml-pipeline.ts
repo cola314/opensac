@@ -45,7 +45,7 @@ export async function runPipeline(items: PipelineInput[]): Promise<PipelineResul
 
   try {
     await new Promise<void>((resolve, reject) => {
-      const pythonPath = join(mlDir, '.venv', 'bin', 'python3');
+      const pythonPath = process.env.ML_PYTHON || 'python3';
       const scriptPath = join(mlDir, 'parser', 'pipeline.py');
 
       execFile(

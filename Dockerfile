@@ -7,13 +7,6 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Install Python ML dependencies
-FROM python:3.13-alpine AS ml-deps
-RUN pip install uv
-WORKDIR /app/ml
-COPY ml/pyproject.toml ml/uv.lock ./
-RUN uv sync --frozen --no-dev
-
 # Build
 FROM base AS builder
 WORKDIR /app
@@ -23,9 +16,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN mkdir -p data
 RUN npm run build
 
-# Production — node base with python added
+# Production
 FROM base AS runner
-RUN apk add --no-cache python3
+RUN apk add --no-cache python3 py3-pip
+# Install ML Python dependencies globally
+RUN pip3 install --break-system-packages dspy-ai tqdm litellm
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -37,12 +32,10 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy ML pipeline + Python venv
-COPY --from=ml-deps /app/ml/.venv ./ml/.venv
+# Copy ML pipeline code (no venv needed, packages installed globally)
 COPY ml/parser ./ml/parser
 COPY ml/eval ./ml/eval
 COPY ml/optimize/compiled_program.json ./ml/optimize/compiled_program.json
-COPY ml/pyproject.toml ./ml/pyproject.toml
 
 # Create data directory for SQLite
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
