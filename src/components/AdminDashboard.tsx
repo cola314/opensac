@@ -191,6 +191,28 @@ export default function AdminDashboard() {
               <span>{data.stats.total}건</span>
               <span style={{ color: '#34c759' }}>{data.stats.processed} 완료</span>
               <span style={{ color: '#0071e3' }}>{data.stats.pending} 대기</span>
+              {data.stats.pending > 0 && (
+                <button
+                  onClick={() => {
+                    // Select all dates with unprocessed concerts
+                    const dates = new Set<string>();
+                    const sns = new Set<string>();
+                    for (const [date, concerts] of Object.entries(data.dates)) {
+                      const unprocessed = concerts.filter(c => !c.processed && c.hasDetailText);
+                      if (unprocessed.length > 0) {
+                        dates.add(date);
+                        unprocessed.forEach(c => sns.add(c.sn));
+                      }
+                    }
+                    setSelectedDates(dates);
+                    setSelectedSns(sns);
+                  }}
+                  className="px-3 py-1 rounded-full font-medium"
+                  style={{ color: '#0071e3', border: '1px solid #0071e3', background: 'none', cursor: 'pointer' }}
+                >
+                  미처리 전체선택
+                </button>
+              )}
             </div>
           )}
         </div>
