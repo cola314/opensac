@@ -92,10 +92,12 @@ function SearchBar({
   value,
   onChange,
   compact,
+  onFocusChange,
 }: {
   value: string;
   onChange: (v: string) => void;
   compact?: boolean;
+  onFocusChange?: (focused: boolean) => void;
 }) {
   return (
     <div className="relative" style={{ maxWidth: compact ? '300px' : '480px', width: '100%' }}>
@@ -135,10 +137,12 @@ function SearchBar({
           (e.currentTarget as HTMLElement).style.borderColor = '#0071e3';
           (e.currentTarget as HTMLElement).style.boxShadow =
             '0 0 0 3px rgba(0, 113, 227, 0.15)';
+          onFocusChange?.(true);
         }}
         onBlur={(e) => {
           (e.currentTarget as HTMLElement).style.borderColor = '#d2d2d7';
           (e.currentTarget as HTMLElement).style.boxShadow = 'none';
+          // blur 시에는 searchFocused를 false로 하지 않음 — compact 유지가 더 나은 UX
         }}
       />
       {value && (
@@ -225,6 +229,7 @@ export default function ConcertHome({
   const [data, setData] = useState<ApiResponse>(initialData);
   const [loading, setLoading] = useState(false);
   const [heroCompact, setHeroCompact] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const heroRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -239,8 +244,15 @@ export default function ConcertHome({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Also compact when there's a search query
-  const isCompact = heroCompact || debouncedQuery.length > 0;
+  // Also compact when there's a search query or search input is focused
+  const isCompact = heroCompact || debouncedQuery.length > 0 || searchFocused;
+
+  // Scroll to top when search is focused so sticky compact bar is visible
+  useEffect(() => {
+    if (searchFocused) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [searchFocused]);
 
   // Debounce query
   useEffect(() => {
@@ -352,7 +364,7 @@ export default function ConcertHome({
             </span>
           )}
           {isCompact && (
-            <SearchBar value={query} onChange={setQuery} compact />
+            <SearchBar value={query} onChange={setQuery} compact onFocusChange={setSearchFocused} />
           )}
           {isCompact && (
             <div className="ml-auto">
@@ -416,7 +428,7 @@ export default function ConcertHome({
 
           <div className="flex flex-col gap-4">
             {!isCompact && (
-              <SearchBar value={query} onChange={setQuery} />
+              <SearchBar value={query} onChange={setQuery} onFocusChange={setSearchFocused} />
             )}
             {!isCompact && (
               <MonthNav
