@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SAC Classical Finder — 와이어프레임</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+      margin: 0;
+      background: #fafafa;
+      color: #222;
+    }
+    header {
+      background: #fff;
+      border-bottom: 1px solid #e5e5e5;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    header h1 { margin: 0; font-size: 18px; }
+    header .meta { color: #888; font-size: 13px; }
+    .search {
+      flex: 1;
+      max-width: 360px;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .filters {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+    }
+    .filters select {
+      padding: 6px 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      background: #fff;
+      cursor: pointer;
+    }
+    .filters label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      color: #555;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    aside {
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 16px;
+      position: sticky;
+      top: 80px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+    }
+    aside h2 {
+      margin: 0 0 12px 0;
+      font-size: 13px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .composer-tag {
+      display: inline-block;
+      margin: 2px 4px 2px 0;
+      padding: 4px 10px;
+      background: #f0f0f0;
+      border-radius: 999px;
+      font-size: 12px;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+    .composer-tag:hover { background: #e8e8e8; }
+    .composer-tag.active {
+      background: #222;
+      color: #fff;
+      border-color: #222;
+    }
+    .composer-tag .count { color: #999; margin-left: 4px; }
+    .composer-tag.active .count { color: #ccc; }
+
+    main { display: flex; flex-direction: column; gap: 12px; }
+    .filter-info {
+      font-size: 13px;
+      color: #666;
+      padding: 8px 4px;
+    }
+    .filter-info .clear {
+      margin-left: 8px;
+      color: #0066cc;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .concert-card {
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 16px 20px;
+    }
+    .concert-card .date {
+      color: #666;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .concert-card .name {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0 0 6px 0;
+    }
+    .concert-card .meta {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 12px;
+    }
+    .composer-chip {
+      display: inline-block;
+      margin: 2px 4px 2px 0;
+      padding: 3px 10px;
+      background: #f4f4f4;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .composer-chip:hover { background: #e0e0e0; }
+    .composer-chip.highlight { background: #ffe6a8; }
+    .toggle {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #0066cc;
+      cursor: pointer;
+      user-select: none;
+    }
+    .pieces {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed #eee;
+    }
+    .piece {
+      font-size: 13px;
+      padding: 4px 0;
+      color: #444;
+    }
+    .piece .pcomposer {
+      color: #0066cc;
+      font-weight: 500;
+      margin-right: 6px;
+    }
+    .empty { color: #888; font-size: 14px; padding: 24px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    const TODAY = new Date().toISOString().slice(0, 10).replace(/-/g, ".");
+    const TODAY_MONTH = TODAY.slice(0, 7);
+
+    const EMOJI_RULES = [
+      { emoji: "🎬", keywords: ["영화음악", "FESTA", "디즈니", "지브리", "블록버스터"] },
+      { emoji: "🧒", keywords: ["어린이", "동물의 사육제", "동물의사육제"] },
+      { emoji: "🎤", keywords: ["합창", "가곡", "성악", "오페라", "바리톤", "소프라노", "테너", "메조"] },
+      { emoji: "🎹", keywords: ["피아노"] },
+      { emoji: "🪈", keywords: ["플루트"] },
+      { emoji: "🎸", keywords: ["기타"] },
+      { emoji: "🎷", keywords: ["클라리넷", "오보에", "바순", "색소폰", "관악"] },
+      { emoji: "🎺", keywords: ["트럼펫", "호른", "트롬본", "금관"] },
+      { emoji: "🎻", keywords: ["바이올린", "첼로", "비올라", "콘트라베이스", "현악"] },
+      { emoji: "🎼", keywords: ["오케스트라", "심포니", "필하모닉", "협주곡"] },
+      { emoji: "🎵", keywords: ["트리오", "콰르텟", "퀸텟", "앙상블", "실내악", "듀오"] },
+    ];
+
+    function emojiFor(name) {
+      for (const rule of EMOJI_RULES) {
+        if (rule.keywords.some(k => name.includes(k))) return rule.emoji;
+      }
+      return "🎵";
+    }
+
+    function App() {
+      const [concerts, setConcerts] = useState([]);
+      const [composers, setComposers] = useState([]);
+      const [selected, setSelected] = useState(null);
+      const [query, setQuery] = useState("");
+      const [expanded, setExpanded] = useState({});
+      const [month, setMonth] = useState(TODAY_MONTH);
+      const [futureOnly, setFutureOnly] = useState(true);
+
+      useEffect(() => {
+        fetch("/api/concerts").then(r => r.json()).then(setConcerts);
+        fetch("/api/composers").then(r => r.json()).then(setComposers);
+      }, []);
+
+      const months = useMemo(() => {
+        const set = new Set(concerts.map(c => (c.date || "").slice(0, 7)).filter(Boolean));
+        return [...set].sort();
+      }, [concerts]);
+
+      const filtered = useMemo(() => {
+        return concerts.filter(c => {
+          if (month && (c.date || "").slice(0, 7) !== month) return false;
+          if (futureOnly && c.date && c.date < TODAY) return false;
+          if (selected) {
+            const has = c.pieces.some(p => p.composers.includes(selected));
+            if (!has) return false;
+          }
+          if (query.trim()) {
+            const q = query.toLowerCase();
+            const inName = c.name.toLowerCase().includes(q);
+            const inComposer = c.pieces.some(p =>
+              p.composers.some(c => c.toLowerCase().includes(q))
+            );
+            const inTitle = c.pieces.some(p => (p.title || "").toLowerCase().includes(q));
+            if (!inName && !inComposer && !inTitle) return false;
+          }
+          return true;
+        });
+      }, [concerts, selected, query, month, futureOnly]);
+
+      const topComposers = composers.slice(0, 30);
+
+      return (
+        <div>
+          <header>
+            <h1>🎼 SAC Classical Finder</h1>
+            <span className="meta">{concerts.length}공연 · {composers.length}작곡가</span>
+            <div className="filters">
+              <select value={month} onChange={e => setMonth(e.target.value)}>
+                <option value="">전체 월</option>
+                {months.map(m => (
+                  <option key={m} value={m}>{m.replace(".", "년 ")}월</option>
+                ))}
+              </select>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={futureOnly}
+                  onChange={e => setFutureOnly(e.target.checked)}
+                />
+                오늘({TODAY}) 이후만
+              </label>
+            </div>
+            <input
+              className="search"
+              placeholder="작곡가, 곡명, 공연명 검색..."
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+            />
+          </header>
+
+          <div className="layout">
+            <aside>
+              <h2>작곡가 ({composers.length})</h2>
+              {topComposers.map(c => (
+                <span
+                  key={c.name}
+                  className={"composer-tag" + (selected === c.name ? " active" : "")}
+                  onClick={() => setSelected(selected === c.name ? null : c.name)}
+                >
+                  {c.name}<span className="count">{c.count}</span>
+                </span>
+              ))}
+              {composers.length > 30 && (
+                <div style={{ fontSize: 12, color: "#888", marginTop: 8 }}>
+                  TOP 30 표시 · 전체 {composers.length}명
+                </div>
+              )}
+            </aside>
+
+            <main>
+              <div className="filter-info">
+                {selected && (
+                  <>
+                    <strong>{selected}</strong> 곡이 있는 공연
+                    <span className="clear" onClick={() => setSelected(null)}>× 해제</span>
+                  </>
+                )}
+                {!selected && <>전체 {filtered.length}개 공연</>}
+              </div>
+
+              {filtered.length === 0 && <div className="empty">조건에 맞는 공연이 없습니다.</div>}
+
+              {filtered.map((c, i) => (
+                <div key={i} className="concert-card">
+                  <div className="date">{c.date} {c.runtime ? `· ${c.runtime}` : ""}</div>
+                  <h3 className="name">{emojiFor(c.name)} {c.name}</h3>
+                  <div className="meta">
+                    {c.place || ""} · 곡 {c.pieces.length}개
+                  </div>
+                  <div>
+                    {[...new Set(c.pieces.flatMap(p => p.composers))].map(comp => (
+                      <span
+                        key={comp}
+                        className={"composer-chip" + (selected === comp ? " highlight" : "")}
+                        onClick={() => setSelected(selected === comp ? null : comp)}
+                      >
+                        {comp}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="pieces">
+                    {c.pieces.map((p, j) => (
+                      <div key={j} className="piece">
+                        <span className="pcomposer">{p.composers.join(", ")}</span>
+                        {p.title}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </main>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>opensac · admin</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+      background: #f8f8f8;
+      color: #222;
+      margin: 0;
+      padding: 24px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 18px; margin: 0 0 16px; }
+    h2 { font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 0.05em; margin: 24px 0 8px; }
+    section {
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+    }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    input[type=text] {
+      padding: 6px 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: monospace;
+    }
+    button {
+      padding: 6px 14px;
+      border: 1px solid #222;
+      background: #222;
+      color: #fff;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button:disabled { background: #aaa; border-color: #aaa; cursor: not-allowed; }
+    label { font-size: 13px; color: #555; }
+    pre {
+      background: #1e1e1e;
+      color: #ddd;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      max-height: 400px;
+      overflow: auto;
+      margin: 12px 0 0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .err { color: #ff8080; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; }
+    th { color: #666; font-weight: 500; }
+    .status-completed { color: #2a8f2a; }
+    .status-failed { color: #c53030; }
+    .status-running { color: #d97706; }
+  </style>
+</head>
+<body>
+  <h1>🛠️ opensac admin</h1>
+
+  <section>
+    <h2>파이프라인 실행</h2>
+    <div class="row">
+      <label>Month</label>
+      <input type="text" id="month" placeholder="2026-05" value="2026-05" />
+      <label><input type="checkbox" id="force" /> force (재추출)</label>
+      <button id="run">▶ 실행</button>
+    </div>
+    <pre id="log">대기 중...</pre>
+  </section>
+
+  <section>
+    <h2>최근 실행 내역</h2>
+    <button onclick="loadRuns()">새로고침</button>
+    <table id="runs"></table>
+  </section>
+
+  <script>
+    const log = document.getElementById("log");
+    const runBtn = document.getElementById("run");
+
+    runBtn.onclick = () => {
+      const month = document.getElementById("month").value.trim();
+      const force = document.getElementById("force").checked;
+      if (!/^\d{4}-\d{2}$/.test(month)) { alert("YYYY-MM 형식"); return; }
+      log.textContent = "";
+      runBtn.disabled = true;
+      const url = `/api/admin/pipeline/run?month=${encodeURIComponent(month)}${force ? "&force=1" : ""}`;
+      const es = new EventSource(url, { withCredentials: true });
+      // EventSource는 POST 안되므로 fetch + ReadableStream 사용
+      es.close();
+      fetch(url, { method: "POST" }).then(async (resp) => {
+        const reader = resp.body.getReader();
+        const dec = new TextDecoder();
+        let buf = "";
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          let parts = buf.split("\n\n");
+          buf = parts.pop();
+          for (const part of parts) {
+            const m = part.match(/event: (\w+)\ndata: (.+)/s);
+            if (!m) continue;
+            const ev = m[1];
+            const data = JSON.parse(m[2]);
+            if (ev === "log") log.textContent += data + "\n";
+            if (ev === "err") log.innerHTML += `<span class="err">${data}</span>\n`;
+            if (ev === "done") {
+              log.textContent += `\n=== 완료 (exit ${data.code}) ===\n`;
+              loadRuns();
+            }
+            log.scrollTop = log.scrollHeight;
+          }
+        }
+        runBtn.disabled = false;
+      }).catch(e => {
+        log.textContent += "error: " + e.message + "\n";
+        runBtn.disabled = false;
+      });
+    };
+
+    async function loadRuns() {
+      const r = await fetch("/api/admin/runs");
+      const data = await r.json();
+      if (!Array.isArray(data)) {
+        document.getElementById("runs").innerHTML = `<tr><td>${data.error || "DB 없음"}</td></tr>`;
+        return;
+      }
+      const head = `<thead><tr><th>id</th><th>month</th><th>started</th><th>status</th><th>new/total</th><th>+곡</th><th>+작곡가</th></tr></thead>`;
+      const body = data.map(r => `
+        <tr>
+          <td>${r.id}</td>
+          <td>${r.month}</td>
+          <td>${(r.started_at || "").slice(0, 19)}</td>
+          <td class="status-${r.status}">${r.status}</td>
+          <td>${r.concerts_new || 0} / ${r.concerts_total || 0}</td>
+          <td>${r.pieces_added || 0}</td>
+          <td>${r.composers_added || 0}</td>
+        </tr>
+      `).join("");
+      document.getElementById("runs").innerHTML = head + body;
+    }
+    loadRuns();
+  </script>
+</body>
+</html>

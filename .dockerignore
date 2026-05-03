@@ -1,0 +1,13 @@
+**/node_modules
+**/__pycache__
+**/*.pyc
+**/.venv
+**/.pytest_cache
+ml/data/*.csv
+ml/data/*.db
+ml/data/*.json
+ml/data/*.txt
+.git
+.github/workflows/*.disabled
+*.md
+.DS_Store
