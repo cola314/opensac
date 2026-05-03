@@ -168,6 +168,37 @@
       margin-right: 6px;
     }
     .empty { color: #888; font-size: 14px; padding: 24px; text-align: center; }
+
+    @media (max-width: 768px) {
+      header {
+        padding: 10px 12px;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      header h1 { font-size: 15px; flex: 1 1 auto; }
+      header .meta { font-size: 11px; flex: 0 0 auto; }
+      .filters { width: 100%; gap: 8px; flex-wrap: wrap; }
+      .filters select { flex: 1 1 auto; min-width: 0; }
+      .filters label { white-space: nowrap; }
+      .search { max-width: none; width: 100%; flex-basis: 100%; }
+
+      .layout {
+        display: block;
+        padding: 12px;
+        gap: 0;
+      }
+      aside {
+        position: static;
+        max-height: none;
+        margin-bottom: 12px;
+        padding: 12px;
+      }
+      aside.collapsed .composer-tag { display: none; }
+      aside.collapsed .composer-tag.always-show { display: inline-block; }
+
+      .concert-card { padding: 12px 14px; }
+      .concert-card .name { font-size: 15px; }
+    }
   </style>
 </head>
 <body>
@@ -239,7 +270,10 @@
         });
       }, [concerts, selected, query, month, futureOnly]);
 
-      const topComposers = composers.slice(0, 30);
+      const [showAllComposers, setShowAllComposers] = useState(false);
+      const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+      const composerLimit = isMobile && !showAllComposers ? 12 : 30;
+      const topComposers = composers.slice(0, composerLimit);
 
       return (
         <div>
@@ -259,7 +293,7 @@
                   checked={futureOnly}
                   onChange={e => setFutureOnly(e.target.checked)}
                 />
-                오늘({TODAY}) 이후만
+                오늘 이후만
               </label>
             </div>
             <input
@@ -282,7 +316,15 @@
                   {c.name}<span className="count">{c.count}</span>
                 </span>
               ))}
-              {composers.length > 30 && (
+              {isMobile && composers.length > 12 && (
+                <div
+                  style={{ fontSize: 12, color: "#0066cc", marginTop: 8, cursor: "pointer" }}
+                  onClick={() => setShowAllComposers(!showAllComposers)}
+                >
+                  {showAllComposers ? "▲ 접기" : `▼ 더보기 (전체 ${composers.length}명)`}
+                </div>
+              )}
+              {!isMobile && composers.length > 30 && (
                 <div style={{ fontSize: 12, color: "#888", marginTop: 8 }}>
                   TOP 30 표시 · 전체 {composers.length}명
                 </div>
