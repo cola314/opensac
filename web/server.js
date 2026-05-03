@@ -90,7 +90,8 @@ app.post("/api/admin/pipeline/run", (req, res) => {
   res.flushHeaders();
 
   const env = { ...process.env, PYTHONIOENCODING: "utf-8" };
-  const child = spawn("python", args, { cwd: ML_DIR, env });
+  const pythonBin = process.env.PYTHON_BIN || "python3";
+  const child = spawn(pythonBin, args, { cwd: ML_DIR, env });
 
   const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 
