@@ -68,14 +68,34 @@
   <h1>🛠️ opensac admin</h1>
 
   <section>
-    <h2>파이프라인 실행</h2>
+    <h2>1. 크롤링 (CSV 생성)</h2>
+    <div class="row">
+      <label>Month</label>
+      <input type="text" id="crawlMonth" placeholder="2026-06" value="2026-06" />
+      <button id="crawl">⬇ 크롤링</button>
+      <span style="color:#888;font-size:12px">예술의전당 사이트에서 음악당 공연 목록 → data/sac_YYYY_MM.csv</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. 파이프라인 실행 (LLM 추출 + 정규화)</h2>
     <div class="row">
       <label>Month</label>
       <input type="text" id="month" placeholder="2026-05" value="2026-05" />
       <label><input type="checkbox" id="force" /> force (재추출)</label>
       <button id="run">▶ 실행</button>
     </div>
+  </section>
+
+  <section>
+    <h2>로그</h2>
     <pre id="log">대기 중...</pre>
+  </section>
+
+  <section>
+    <h2>저장된 CSV</h2>
+    <button onclick="loadCsvs()">새로고침</button>
+    <table id="csvs"></table>
   </section>
 
   <section>
@@ -87,17 +107,11 @@
   <script>
     const log = document.getElementById("log");
     const runBtn = document.getElementById("run");
+    const crawlBtn = document.getElementById("crawl");
 
-    runBtn.onclick = () => {
-      const month = document.getElementById("month").value.trim();
-      const force = document.getElementById("force").checked;
-      if (!/^\d{4}-\d{2}$/.test(month)) { alert("YYYY-MM 형식"); return; }
+    function streamPost(url, btns) {
       log.textContent = "";
-      runBtn.disabled = true;
-      const url = `/api/admin/pipeline/run?month=${encodeURIComponent(month)}${force ? "&force=1" : ""}`;
-      const es = new EventSource(url, { withCredentials: true });
-      // EventSource는 POST 안되므로 fetch + ReadableStream 사용
-      es.close();
+      btns.forEach(b => b.disabled = true);
       fetch(url, { method: "POST" }).then(async (resp) => {
         const reader = resp.body.getReader();
         const dec = new TextDecoder();
@@ -118,16 +132,42 @@
             if (ev === "done") {
               log.textContent += `\n=== 완료 (exit ${data.code}) ===\n`;
               loadRuns();
+              loadCsvs();
             }
             log.scrollTop = log.scrollHeight;
           }
         }
-        runBtn.disabled = false;
+        btns.forEach(b => b.disabled = false);
       }).catch(e => {
         log.textContent += "error: " + e.message + "\n";
-        runBtn.disabled = false;
+        btns.forEach(b => b.disabled = false);
       });
+    }
+
+    runBtn.onclick = () => {
+      const month = document.getElementById("month").value.trim();
+      const force = document.getElementById("force").checked;
+      if (!/^\d{4}-\d{2}$/.test(month)) { alert("YYYY-MM 형식"); return; }
+      streamPost(`/api/admin/pipeline/run?month=${encodeURIComponent(month)}${force ? "&force=1" : ""}`, [runBtn, crawlBtn]);
     };
+
+    crawlBtn.onclick = () => {
+      const month = document.getElementById("crawlMonth").value.trim();
+      if (!/^\d{4}-\d{2}$/.test(month)) { alert("YYYY-MM 형식"); return; }
+      streamPost(`/api/admin/crawl?month=${encodeURIComponent(month)}`, [runBtn, crawlBtn]);
+    };
+
+    async function loadCsvs() {
+      try {
+        const r = await fetch("/api/admin/csvs");
+        const data = await r.json();
+        const head = `<thead><tr><th>파일</th><th>크기</th><th>수정시각</th></tr></thead>`;
+        const body = data.length === 0
+          ? `<tr><td colspan="3" style="color:#888">CSV 없음 (먼저 크롤링)</td></tr>`
+          : data.map(f => `<tr><td>${f.name}</td><td>${(f.size/1024).toFixed(1)} KB</td><td>${(f.mtime||"").slice(0,19)}</td></tr>`).join("");
+        document.getElementById("csvs").innerHTML = head + body;
+      } catch {}
+    }
 
     async function loadRuns() {
       const r = await fetch("/api/admin/runs");
@@ -151,6 +191,7 @@
       document.getElementById("runs").innerHTML = head + body;
     }
     loadRuns();
+    loadCsvs();
   </script>
 </body>
 </html>

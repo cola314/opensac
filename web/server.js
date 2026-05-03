@@ -72,24 +72,16 @@ app.get("/api/admin/runs", (_req, res) => {
   res.json(rows);
 });
 
-app.post("/api/admin/pipeline/run", (req, res) => {
-  const month = (req.query.month || "").toString().trim();
-  if (!/^\d{4}-\d{2}$/.test(month)) {
-    return res.status(400).send("month query param required (YYYY-MM)");
-  }
-  const force = req.query.force === "1";
-
-  const args = ["run_pipeline.py", "--month", month];
-  if (force) args.push("--force");
-
+function streamPython(req, res, args) {
   res.set({
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
     Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
   });
   res.flushHeaders();
 
-  const env = { ...process.env, PYTHONIOENCODING: "utf-8" };
+  const env = { ...process.env, PYTHONIOENCODING: "utf-8", PYTHONUNBUFFERED: "1" };
   const pythonBin = process.env.PYTHON_BIN || "python3";
   const child = spawn(pythonBin, args, { cwd: ML_DIR, env });
 
@@ -111,6 +103,36 @@ app.post("/api/admin/pipeline/run", (req, res) => {
   });
 
   req.on("close", () => child.kill());
+}
+
+app.post("/api/admin/pipeline/run", (req, res) => {
+  const month = (req.query.month || "").toString().trim();
+  if (!/^\d{4}-\d{2}$/.test(month)) {
+    return res.status(400).send("month query param required (YYYY-MM)");
+  }
+  const args = ["run_pipeline.py", "--month", month];
+  if (req.query.force === "1") args.push("--force");
+  streamPython(req, res, args);
+});
+
+app.post("/api/admin/crawl", (req, res) => {
+  const month = (req.query.month || "").toString().trim();
+  if (!/^\d{4}-\d{2}$/.test(month)) {
+    return res.status(400).send("month query param required (YYYY-MM)");
+  }
+  const [year, mm] = month.split("-").map((s) => String(parseInt(s, 10)));
+  streamPython(req, res, ["crawl.py", "--year", year, "--month", mm]);
+});
+
+app.get("/api/admin/csvs", (_req, res) => {
+  const files = fs
+    .readdirSync(DATA_DIR)
+    .filter((f) => /^sac_\d{4}_\d{2}\.csv$/.test(f))
+    .map((f) => {
+      const stat = fs.statSync(path.join(DATA_DIR, f));
+      return { name: f, size: stat.size, mtime: stat.mtime };
+    });
+  res.json(files);
 });
 
 app.use(express.static(path.join(__dirname, "public")));
