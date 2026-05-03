@@ -43,7 +43,7 @@ from db import (
 )
 from extract_full_may import PROMPT_TEMPLATE, call_gemini
 
-DATA = Path(__file__).parent / "data"
+DATA = Path(os.environ.get("DATA_DIR") or (Path(__file__).parent / "data"))
 
 
 def split_composer_string(raw: str) -> list[str]:

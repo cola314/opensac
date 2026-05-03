@@ -1,9 +1,11 @@
 """SQLite 연결·헬퍼."""
 
+import os
 import sqlite3
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "data" / "sac.db"
+DATA_DIR = Path(os.environ.get("DATA_DIR") or (Path(__file__).parent / "data"))
+DB_PATH = DATA_DIR / "sac.db"
 SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 
 

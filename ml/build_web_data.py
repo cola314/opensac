@@ -11,12 +11,13 @@
 """
 
 import json
+import os
 from pathlib import Path
 
 import pandas as pd
 
 
-DATA = Path(__file__).parent / "data"
+DATA = Path(os.environ.get("DATA_DIR") or (Path(__file__).parent / "data"))
 
 
 def main() -> None:

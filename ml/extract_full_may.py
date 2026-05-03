@@ -12,7 +12,7 @@ from time import sleep
 import pandas as pd
 import requests
 
-DATA = Path(__file__).parent / "data"
+DATA = Path(os.environ.get("DATA_DIR") or (Path(__file__).parent / "data"))
 
 
 PROMPT_TEMPLATE = """다음은 클래식 음악 공연의 프로그램 정보입니다.
