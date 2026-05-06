@@ -187,23 +187,16 @@
       font-weight: 500;
       margin-right: 6px;
     }
-    .piece-link {
-      display: block;
-      color: inherit;
-      text-decoration: none;
-      padding: 4px 6px;
-      margin: 0 -6px;
-      border-radius: 4px;
-    }
-    .piece-link:hover {
-      background: #fff5d6;
-    }
-    .piece-link:hover::after {
-      content: "  ▶ YouTube";
+    .piece-yt {
+      margin-left: 8px;
       color: #c00;
+      text-decoration: none;
       font-size: 11px;
-      margin-left: 6px;
+      opacity: 0.35;
+      white-space: nowrap;
     }
+    .piece:hover .piece-yt { opacity: 1; }
+    .piece-yt:hover { text-decoration: underline; }
     .empty { color: #888; font-size: 14px; padding: 24px; text-align: center; }
 
     @media (max-width: 768px) {
@@ -429,15 +422,16 @@
                       const yt = `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
                       return (
                         <div key={j} className="piece">
+                          <span className="pcomposer">{p.composers.join(", ")}</span>
+                          {p.title}
                           <a
-                            className="piece-link"
+                            className="piece-yt"
                             href={yt}
                             target="_blank"
                             rel="noopener noreferrer"
                             title="YouTube에서 검색"
                           >
-                            <span className="pcomposer">{p.composers.join(", ")}</span>
-                            {p.title}
+                            ▶ YouTube
                           </a>
                         </div>
                       );
