@@ -44,8 +44,35 @@ function basicAuth(req, res, next) {
   next();
 }
 
+function loadProgramCodeMap() {
+  const Database = tryLoadSqlite();
+  if (!Database) return null;
+  const dbPath = path.join(DATA_DIR, "sac.db");
+  if (!fs.existsSync(dbPath)) return null;
+  try {
+    const db = new Database(dbPath, { readonly: true });
+    const rows = db.prepare("SELECT name, program_code FROM concerts").all();
+    db.close();
+    const map = new Map();
+    for (const r of rows) map.set(r.name, r.program_code);
+    return map;
+  } catch (e) {
+    console.warn("program_code map load failed:", e.message);
+    return null;
+  }
+}
+
 app.get("/api/concerts", (_req, res) => {
-  res.json(safeReadJson("concerts.json", []));
+  const concerts = safeReadJson("concerts.json", []);
+  const codeMap = loadProgramCodeMap();
+  if (codeMap) {
+    for (const c of concerts) {
+      if (!c.program_code && c.name && codeMap.has(c.name)) {
+        c.program_code = codeMap.get(c.name);
+      }
+    }
+  }
+  res.json(concerts);
 });
 
 app.get("/api/composers", (_req, res) => {
