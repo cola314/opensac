@@ -11,6 +11,17 @@
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window, document, "clarity", "script", "wlkratfuuo");
   </script>
+  <script>
+    // FOUC 방지: 페인트 전에 data-theme 결정. localStorage > prefers-color-scheme > light.
+    (function(){
+      try {
+        var stored = localStorage.getItem("theme");
+        var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var theme = stored || (prefersDark ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", theme);
+      } catch (e) {}
+    })();
+  </script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -229,6 +240,56 @@
       .concert-card { padding: 12px 14px; }
       .concert-card .name { font-size: 15px; }
     }
+
+    .theme-toggle {
+      background: transparent;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+    }
+    .theme-toggle:hover { background: #f0f0f0; }
+
+    [data-theme="dark"] body { background: #181818; color: #e8e8e8; }
+    [data-theme="dark"] header { background: #242424; border-bottom-color: #333; }
+    [data-theme="dark"] header .meta { color: #999; }
+    [data-theme="dark"] .search,
+    [data-theme="dark"] .filters select {
+      background: #2a2a2a;
+      color: #e8e8e8;
+      border-color: #444;
+    }
+    [data-theme="dark"] .filters label { color: #bbb; }
+    [data-theme="dark"] aside { background: #242424; border-color: #333; }
+    [data-theme="dark"] aside h2 { color: #999; }
+    [data-theme="dark"] .composer-tag { background: #2d2d2d; color: #ddd; }
+    [data-theme="dark"] .composer-tag:hover { background: #3a3a3a; }
+    [data-theme="dark"] .composer-tag.active {
+      background: #e8e8e8;
+      color: #181818;
+      border-color: #e8e8e8;
+    }
+    [data-theme="dark"] .composer-tag .count { color: #777; }
+    [data-theme="dark"] .composer-tag.active .count { color: #555; }
+    [data-theme="dark"] .filter-info { color: #999; }
+    [data-theme="dark"] .filter-info .clear,
+    [data-theme="dark"] .concert-card .sac-link,
+    [data-theme="dark"] .toggle,
+    [data-theme="dark"] .piece .pcomposer { color: #5aa9ff; }
+    [data-theme="dark"] .concert-card { background: #242424; border-color: #333; }
+    [data-theme="dark"] .concert-card .date { color: #aaa; }
+    [data-theme="dark"] .concert-card .meta { color: #888; }
+    [data-theme="dark"] .composer-chip { background: #2d2d2d; color: #ddd; }
+    [data-theme="dark"] .composer-chip:hover { background: #3a3a3a; }
+    [data-theme="dark"] .composer-chip.highlight { background: #5a4a1a; color: #ffe6a8; }
+    [data-theme="dark"] .pieces { border-top-color: #333; }
+    [data-theme="dark"] .piece { color: #ddd; }
+    [data-theme="dark"] .piece-yt { color: #ff5555; }
+    [data-theme="dark"] .empty { color: #888; }
+    [data-theme="dark"] .theme-toggle { border-color: #444; color: #e8e8e8; }
+    [data-theme="dark"] .theme-toggle:hover { background: #2d2d2d; }
   </style>
 </head>
 <body>
@@ -268,6 +329,14 @@
       const [expanded, setExpanded] = useState({});
       const [month, setMonth] = useState(TODAY_MONTH);
       const [futureOnly, setFutureOnly] = useState(true);
+      const [theme, setTheme] = useState(
+        () => document.documentElement.getAttribute("data-theme") || "light"
+      );
+
+      useEffect(() => {
+        document.documentElement.setAttribute("data-theme", theme);
+        localStorage.setItem("theme", theme);
+      }, [theme]);
 
       useEffect(() => {
         fetch("/api/concerts").then(r => r.json()).then(setConcerts);
@@ -325,6 +394,13 @@
                 />
                 오늘 이후만
               </label>
+              <button
+                className="theme-toggle"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                title={theme === "dark" ? "라이트 모드로" : "다크 모드로"}
+              >
+                {theme === "dark" ? "☀" : "🌙"}
+              </button>
             </div>
             <input
               className="search"
