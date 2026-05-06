@@ -45,6 +45,7 @@ def main() -> None:
                 ("PRICE_INFO", "price"),
                 ("BEGIN_DATE", "begin"),
                 ("END_DATE", "end"),
+                ("PROGRAM_CODE", "program_code"),
             ]:
                 if src in m and pd.notna(m[src]):
                     obj[dst] = m[src]
