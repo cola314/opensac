@@ -46,6 +46,7 @@ def main() -> None:
                 ("BEGIN_DATE", "begin"),
                 ("END_DATE", "end"),
                 ("PROGRAM_CODE", "program_code"),
+                ("SN", "sn"),
             ]:
                 if src in m and pd.notna(m[src]):
                     obj[dst] = m[src]

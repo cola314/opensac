@@ -126,7 +126,7 @@ JSON만 출력."""
 def export_to_json(conn) -> tuple[int, int]:
     """Express 호환용 JSON 빌드. (concerts_count, composers_count) 반환."""
     rows = conn.execute(
-        """SELECT c.id, c.name, c.date, c.place, c.runtime, c.price
+        """SELECT c.id, c.name, c.date, c.place, c.runtime, c.price, c.sn
            FROM concerts c
            WHERE c.extracted_at IS NOT NULL
            ORDER BY c.date"""
@@ -148,7 +148,7 @@ def export_to_json(conn) -> tuple[int, int]:
             ).fetchall()
             pieces.append({"composers": [r["canonical"] for r in comp_rows], "title": p["title"]})
         obj = {"name": c["name"], "date": c["date"], "pieces": pieces}
-        for k in ("place", "runtime", "price"):
+        for k in ("place", "runtime", "price", "sn"):
             if c[k]:
                 obj[k] = c[k]
         concerts_out.append(obj)
@@ -206,6 +206,7 @@ def run(month: str, csv_path: Path, force: bool, api_key: str) -> int:
 
         for idx, row in df.iterrows():
             program_code = str(row["PROGRAM_CODE"])
+            sn = str(row["SN"]) if "SN" in row and pd.notna(row.get("SN")) else None
             concert_id, is_new = upsert_concert(
                 conn,
                 program_code=program_code,
@@ -216,6 +217,7 @@ def run(month: str, csv_path: Path, force: bool, api_key: str) -> int:
                 runtime=row.get("PROGRAM_PLAYTIME") if pd.notna(row.get("PROGRAM_PLAYTIME")) else None,
                 price=row.get("PRICE_INFO") if pd.notna(row.get("PRICE_INFO")) else None,
                 detail_text=row["detail_text"],
+                sn=sn,
             )
 
             already_extracted = conn.execute(

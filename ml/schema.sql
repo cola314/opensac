@@ -6,6 +6,7 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS concerts (
     id              INTEGER PRIMARY KEY,
     program_code    TEXT UNIQUE NOT NULL,        -- 예술의전당 PROGRAM_CODE
+    sn              TEXT,                        -- 예술의전당 SN (show_view URL 파라미터)
     name            TEXT NOT NULL,
     date            TEXT NOT NULL,               -- "2026.05.22" (BEGIN_DATE)
     end_date        TEXT,

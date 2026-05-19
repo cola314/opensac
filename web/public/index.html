@@ -455,9 +455,9 @@
                   <div className="date">{c.date} {c.runtime ? `· ${c.runtime}` : ""}</div>
                   <h3 className="name">
                     {emojiFor(c.name)}{" "}
-                    {c.program_code ? (
+                    {c.sn ? (
                       <a
-                        href={`https://www.sac.or.kr/site/main/show/show_view?SN=${c.program_code}`}
+                        href={`https://www.sac.or.kr/site/main/show/show_view?SN=${c.sn}`}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -466,10 +466,10 @@
                     ) : (
                       c.name
                     )}
-                    {c.program_code && (
+                    {c.sn && (
                       <a
                         className="sac-link"
-                        href={`https://www.sac.or.kr/site/main/show/show_view?SN=${c.program_code}`}
+                        href={`https://www.sac.or.kr/site/main/show/show_view?SN=${c.sn}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         title="예술의전당에서 보기"

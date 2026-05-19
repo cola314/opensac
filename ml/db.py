@@ -17,10 +17,15 @@ def connect() -> sqlite3.Connection:
 
 
 def init_db() -> None:
-    """스키마 적용 (idempotent)."""
+    """스키마 적용 (idempotent) + 마이그레이션."""
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     with connect() as conn:
         conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+        # Migration: concerts.sn 컬럼 추가 (기존 DB 호환)
+        try:
+            conn.execute("ALTER TABLE concerts ADD COLUMN sn TEXT")
+        except Exception:
+            pass  # 이미 존재하면 무시
 
 
 def upsert_concert(
@@ -33,6 +38,7 @@ def upsert_concert(
     runtime: str | None,
     price: str | None,
     detail_text: str | None,
+    sn: str | None = None,
 ) -> tuple[int, bool]:
     """concert UPSERT. (concert_id, is_new) 반환."""
     cur = conn.execute("SELECT id FROM concerts WHERE program_code = ?", (program_code,))
@@ -40,14 +46,14 @@ def upsert_concert(
     if row:
         conn.execute(
             """UPDATE concerts SET name=?, date=?, end_date=?, place=?, runtime=?, price=?,
-               detail_text=?, updated_at=CURRENT_TIMESTAMP WHERE id=?""",
-            (name, date, end_date, place, runtime, price, detail_text, row["id"]),
+               detail_text=?, sn=?, updated_at=CURRENT_TIMESTAMP WHERE id=?""",
+            (name, date, end_date, place, runtime, price, detail_text, sn, row["id"]),
         )
         return row["id"], False
     cur = conn.execute(
-        """INSERT INTO concerts (program_code, name, date, end_date, place, runtime, price, detail_text)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-        (program_code, name, date, end_date, place, runtime, price, detail_text),
+        """INSERT INTO concerts (program_code, sn, name, date, end_date, place, runtime, price, detail_text)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (program_code, sn, name, date, end_date, place, runtime, price, detail_text),
     )
     return cur.lastrowid, True
 
