@@ -480,6 +480,7 @@
                   </h3>
                   <div className="meta">
                     {c.place || ""} · 곡 {c.pieces.length}개
+                    {c.price && <span className="price-info"> · {c.price}</span>}
                   </div>
                   <div>
                     {[...new Set(c.pieces.flatMap(p => p.composers))].map(comp => (
