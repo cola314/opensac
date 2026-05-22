@@ -75,6 +75,23 @@
       cursor: pointer;
       color: #555;
     }
+    .dow-group { display: flex; gap: 2px; }
+    .dow-chip {
+      min-width: 24px;
+      padding: 4px 6px;
+      border: 1px solid #ddd;
+      background: #fff;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      color: #555;
+      line-height: 1;
+    }
+    .dow-chip:hover { background: #f0f0f0; }
+    .dow-chip.active { background: #222; color: #fff; border-color: #222; }
+    .dow-chip.sun { color: #c00; }
+    .dow-chip.sat { color: #06c; }
+    .dow-chip.active.sun, .dow-chip.active.sat { color: #fff; }
     .layout {
       display: grid;
       grid-template-columns: 240px 1fr;
@@ -290,6 +307,12 @@
     [data-theme="dark"] .empty { color: #888; }
     [data-theme="dark"] .theme-toggle { border-color: #444; color: #e8e8e8; }
     [data-theme="dark"] .theme-toggle:hover { background: #2d2d2d; }
+    [data-theme="dark"] .dow-chip { background: #2a2a2a; color: #ccc; border-color: #444; }
+    [data-theme="dark"] .dow-chip:hover { background: #3a3a3a; }
+    [data-theme="dark"] .dow-chip.active { background: #e8e8e8; color: #181818; border-color: #e8e8e8; }
+    [data-theme="dark"] .dow-chip.sun { color: #ff7070; }
+    [data-theme="dark"] .dow-chip.sat { color: #5aa9ff; }
+    [data-theme="dark"] .dow-chip.active.sun, [data-theme="dark"] .dow-chip.active.sat { color: #181818; }
   </style>
 </head>
 <body>
@@ -329,6 +352,16 @@
       const [expanded, setExpanded] = useState({});
       const [month, setMonth] = useState(TODAY_MONTH);
       const [futureOnly, setFutureOnly] = useState(true);
+      const [daysOfWeek, setDaysOfWeek] = useState(() => new Set());
+      const DOW_ORDER = [1, 2, 3, 4, 5, 6, 0];
+      const DOW_LABELS = { 0: "일", 1: "월", 2: "화", 3: "수", 4: "목", 5: "금", 6: "토" };
+      const toggleDow = (d) => {
+        setDaysOfWeek(prev => {
+          const next = new Set(prev);
+          if (next.has(d)) next.delete(d); else next.add(d);
+          return next;
+        });
+      };
       const [theme, setTheme] = useState(
         () => document.documentElement.getAttribute("data-theme") || "light"
       );
@@ -352,6 +385,12 @@
         return concerts.filter(c => {
           if (month && (c.date || "").slice(0, 7) !== month) return false;
           if (futureOnly && c.date && c.date < TODAY) return false;
+          if (daysOfWeek.size > 0) {
+            if (!c.date) return false;
+            const [y, m, d] = c.date.split(".").map(Number);
+            const dow = new Date(y, m - 1, d).getDay();
+            if (!daysOfWeek.has(dow)) return false;
+          }
           if (selected) {
             const has = c.pieces.some(p => p.composers.includes(selected));
             if (!has) return false;
@@ -367,7 +406,7 @@
           }
           return true;
         });
-      }, [concerts, selected, query, month, futureOnly]);
+      }, [concerts, selected, query, month, futureOnly, daysOfWeek]);
 
       const [showAllComposers, setShowAllComposers] = useState(false);
       const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
@@ -394,6 +433,24 @@
                 />
                 오늘 이후만
               </label>
+              <div className="dow-group" role="group" aria-label="요일 필터">
+                {DOW_ORDER.map(d => (
+                  <button
+                    key={d}
+                    type="button"
+                    className={
+                      "dow-chip" +
+                      (d === 0 ? " sun" : "") +
+                      (d === 6 ? " sat" : "") +
+                      (daysOfWeek.has(d) ? " active" : "")
+                    }
+                    onClick={() => toggleDow(d)}
+                    title={DOW_LABELS[d] + "요일"}
+                  >
+                    {DOW_LABELS[d]}
+                  </button>
+                ))}
+              </div>
               <button
                 className="theme-toggle"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
