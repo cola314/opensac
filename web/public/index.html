@@ -24,7 +24,11 @@
   </script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- @babel/standalone는 메이저 버전 고정 필수: Babel 8부터 preset-react runtime
+       기본값이 automatic으로 바뀌어 `import { jsx } from "react/jsx-runtime"`를
+       비-module <script>에 주입 → "Cannot use import statement outside a module"로
+       앱이 안 뜸. v7은 classic(React.createElement) 기본이라 UMD React 전역과 동작. -->
+  <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
   <style>
     * { box-sizing: border-box; }
     body {
