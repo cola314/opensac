@@ -42,6 +42,7 @@ from db import (
     upsert_concert,
 )
 from extract_full_may import PROMPT_TEMPLATE, call_gemini
+from program_gate import gate_reason
 
 DATA = Path(os.environ.get("DATA_DIR") or (Path(__file__).parent / "data"))
 
@@ -125,10 +126,12 @@ JSON만 출력."""
 
 def export_to_json(conn) -> tuple[int, int]:
     """Express 호환용 JSON 빌드. (concerts_count, composers_count) 반환."""
+    # no_program=1 건도 내보낸다. 곡목이 아직 안 올라온 공연이라는 사실 자체가 정보이고,
+    # 프론트가 pieces=[] 를 보고 "프로그램 미공개"로 표시한다.
     rows = conn.execute(
         """SELECT c.id, c.name, c.date, c.place, c.runtime, c.price, c.sn
            FROM concerts c
-           WHERE c.extracted_at IS NOT NULL
+           WHERE c.extracted_at IS NOT NULL OR c.no_program = 1
            ORDER BY c.date"""
     ).fetchall()
     concerts_out = []
@@ -201,6 +204,7 @@ def run(month: str, csv_path: Path, force: bool, api_key: str) -> int:
 
         new_count = 0
         skipped = 0
+        no_program = 0
         pieces_added = 0
         composers_added_set: set[int] = set()
 
@@ -228,11 +232,34 @@ def run(month: str, csv_path: Path, force: bool, api_key: str) -> int:
                 skipped += 1
                 continue
 
+            # 곡목이 없는 페이지를 LLM에 넘기면 모델이 그럴듯한 프로그램을 지어낸다.
+            # extracted_at은 NULL로 두므로, SAC이 프로그램을 올리면 다음 런에서 자동 재시도된다.
+            reason = gate_reason(row["detail_text"])
+            if reason:
+                conn.execute("UPDATE concerts SET no_program = 1 WHERE id = ?", (concert_id,))
+                conn.execute("DELETE FROM pieces WHERE concert_id = ?", (concert_id,))
+                conn.commit()
+                no_program += 1
+                log(f"[{idx+1}/{len(df)}] 곡목 없음, 추출 생략: {row['PROGRAM_SUBJECT'][:40]} — {reason}")
+                continue
+            conn.execute("UPDATE concerts SET no_program = 0 WHERE id = ?", (concert_id,))
+
             log(f"[{idx+1}/{len(df)}] LLM 추출: {row['PROGRAM_SUBJECT'][:50]}")
             try:
                 pieces = call_gemini(api_key, row["detail_text"])
             except Exception as e:
                 log(f"  [error] {e}")
+                continue
+
+            # 게이트를 통과했지만 모델이 "곡목 없음"으로 판정한 경우(프롬프트 규칙 11).
+            # 게이트와 똑같이 취급한다 — extracted_at을 남기지 않아 다음 런에서 재시도된다.
+            if not pieces:
+                conn.execute("UPDATE concerts SET no_program = 1 WHERE id = ?", (concert_id,))
+                conn.execute("DELETE FROM pieces WHERE concert_id = ?", (concert_id,))
+                conn.commit()
+                no_program += 1
+                log("  곡목 없음 (LLM 판정) — 추출 결과 없음으로 기록")
+                sleep(0.7)
                 continue
 
             if force:
@@ -288,7 +315,10 @@ def run(month: str, csv_path: Path, force: bool, api_key: str) -> int:
             new_count += 1
             sleep(0.7)
 
-        log(f"\n신규 추출: {new_count}, skip: {skipped}, 곡 추가: {pieces_added}")
+        log(
+            f"\n신규 추출: {new_count}, skip: {skipped}, "
+            f"곡목 없음: {no_program}, 곡 추가: {pieces_added}"
+        )
 
         c_cnt, comp_cnt = export_to_json(conn)
         log(f"JSON export: {c_cnt} 공연, {comp_cnt} 작곡가")

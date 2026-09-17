@@ -230,6 +230,19 @@
     .piece:hover .piece-yt { opacity: 1; }
     .piece-yt:hover { text-decoration: underline; }
     .empty { color: #888; font-size: 14px; padding: 24px; text-align: center; }
+    .no-program {
+      font-size: 13px;
+      padding: 4px 0;
+      color: #999;
+      font-style: italic;
+    }
+    .no-program-sub {
+      display: block;
+      font-size: 11px;
+      font-style: normal;
+      color: #bbb;
+      margin-top: 2px;
+    }
 
     @media (max-width: 768px) {
       header {
@@ -306,6 +319,8 @@
     [data-theme="dark"] .composer-chip:hover { background: #3a3a3a; }
     [data-theme="dark"] .composer-chip.highlight { background: #5a4a1a; color: #ffe6a8; }
     [data-theme="dark"] .pieces { border-top-color: #333; }
+    [data-theme="dark"] .no-program { color: #777; }
+    [data-theme="dark"] .no-program-sub { color: #5c5c5c; }
     [data-theme="dark"] .piece { color: #ddd; }
     [data-theme="dark"] .piece-yt { color: #ff5555; }
     [data-theme="dark"] .empty { color: #888; }
@@ -540,7 +555,7 @@
                     )}
                   </h3>
                   <div className="meta">
-                    {c.place || ""} · 곡 {c.pieces.length}개
+                    {c.place || ""} · {c.pieces.length > 0 ? `곡 ${c.pieces.length}개` : "프로그램 미공개"}
                     {c.price && <span className="price-info"> · {c.price}</span>}
                   </div>
                   <div>
@@ -555,6 +570,14 @@
                     ))}
                   </div>
                   <div className="pieces">
+                    {c.pieces.length === 0 && (
+                      <div className="no-program">
+                        아직 공연 정보가 없습니다
+                        <span className="no-program-sub">
+                          예술의전당에 연주 곡목이 올라오면 표시됩니다
+                        </span>
+                      </div>
+                    )}
                     {c.pieces.map((p, j) => {
                       const q = `${p.composers.join(" ")} ${p.title || ""}`.trim();
                       const yt = `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;

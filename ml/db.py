@@ -26,6 +26,11 @@ def init_db() -> None:
             conn.execute("ALTER TABLE concerts ADD COLUMN sn TEXT")
         except Exception:
             pass  # 이미 존재하면 무시
+        # Migration: concerts.no_program 컬럼 추가 (program_gate 도입)
+        try:
+            conn.execute("ALTER TABLE concerts ADD COLUMN no_program INTEGER NOT NULL DEFAULT 0")
+        except Exception:
+            pass  # 이미 존재하면 무시
 
 
 def upsert_concert(

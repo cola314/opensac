@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS concerts (
     price           TEXT,
     detail_text     TEXT,                        -- 원본 보존
     extracted_at    TIMESTAMP,                   -- LLM 추출 완료 시각 (NULL=미추출)
+    no_program      INTEGER NOT NULL DEFAULT 0,  -- 1=작품소개에 곡목이 없어 추출 생략 (program_gate)
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
