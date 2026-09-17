@@ -126,12 +126,19 @@ JSON만 출력."""
 
 def export_to_json(conn) -> tuple[int, int]:
     """Express 호환용 JSON 빌드. (concerts_count, composers_count) 반환."""
-    # no_program=1 건도 내보낸다. 곡목이 아직 안 올라온 공연이라는 사실 자체가 정보이고,
-    # 프론트가 pieces=[] 를 보고 "프로그램 미공개"로 표시한다.
+    # 크롤된 공연은 추출 상태와 무관하게 전부 내보낸다.
+    #
+    # 곡목이 없는 이유는 두 가지다 — SAC이 아직 안 올렸거나(no_program=1),
+    # 우리가 아직 추출을 못 했거나(extracted_at IS NULL, LLM 에러 등). 사용자
+    # 입장에선 둘이 구분되지 않고 할 수 있는 일도 같으므로 똑같이 보여준다.
+    # 운영자용 구분은 no_program 컬럼에 남아 있다.
+    #
+    # 추출 안 된 공연을 숨기면 목록이 '조용히' 불완전해진다 — 사용자에겐
+    # "그날 공연이 없다"로 읽히고, 무엇이 빠졌는지 아무도 모른다.
+    # 곡 없는 카드가 섞이는 노이즈보다 침묵하는 누락이 나쁘다.
     rows = conn.execute(
         """SELECT c.id, c.name, c.date, c.place, c.runtime, c.price, c.sn
            FROM concerts c
-           WHERE c.extracted_at IS NOT NULL OR c.no_program = 1
            ORDER BY c.date"""
     ).fetchall()
     concerts_out = []
