@@ -7,6 +7,7 @@
 """
 
 import argparse
+import calendar
 import os
 import sys
 from pathlib import Path
@@ -24,7 +25,8 @@ def fetch_calendar(year: int, month: int, category_primary: int = 2) -> dict:
         "searchYear": str(year),
         "searchMonth": f"{month:02d}",
         "searchFirstDay": "1",
-        "searchLastDay": "31",
+        # SAC returns result=fail when searchLastDay exceeds the month's length (e.g. 31 in Nov).
+        "searchLastDay": str(calendar.monthrange(year, month)[1]),
         "CATEGORY_PRIMARY": str(category_primary),
     }
     headers = {
